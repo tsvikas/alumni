@@ -119,9 +119,15 @@ def check_version(module_name, module_version):
     assert module_version == getattr(__import__(module_name), "__version__")
 
 
-def _load_estimator_from_group(hdf_file, group, fitted):
+# noinspection PyProtectedMember
+def _get_user_attrs(group):
     attrs = group._v_attrs
     user_attrs = {k: attrs[k] for k in attrs._f_list("user")}
+    return user_attrs
+
+
+def _load_estimator_from_group(hdf_file, group, fitted):
+    user_attrs = _get_user_attrs(group)
 
     group_type = GroupType[user_attrs.pop("__type__")]
     if group_type == GroupType.ESTIMATOR:
@@ -141,8 +147,7 @@ def _load_estimator_from_group(hdf_file, group, fitted):
                 hdf_file.get_node_attr(fit_group, "__type__")
                 == GroupType.FITTED_ATTRIBUTES.name
             )
-            fit_attrs = fit_group._v_attrs
-            fit_user_attrs = {k: fit_attrs[k] for k in fit_attrs._f_list("user")}
+            fit_user_attrs = _get_user_attrs(fit_group)
             # TODO: add subgroups to fit_user_attrs
 
             for k, v in fit_user_attrs.items():
