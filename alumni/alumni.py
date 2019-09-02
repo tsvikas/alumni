@@ -58,14 +58,18 @@ def get_params_dict(estimator):
 
 
 def get_fit_params_dict(estimator):
-    all_attrs = dir(estimator)
-    orig_attrs = dir(estimator.__class__)
-    fit_param_names = [p for p in all_attrs if p not in orig_attrs and p.endswith("_")]
+    fit_param_names = [
+        p for p in dir(estimator) if p.endswith("_") and not p.endswith("__")
+    ]
     assert not [p for p in fit_param_names if p.startswith("_")]
-    # TODO: add `and not p.startswith("_")` or remove `assert`
-    fit_params_dict = {
-        param_name: getattr(estimator, param_name) for param_name in fit_param_names
-    }
+
+    fit_params_dict = {}
+    for param_name in fit_param_names:
+        try:
+            fit_params_dict[param_name] = getattr(estimator, param_name)
+        except AttributeError:
+            # some attributes might exist (since they are properties) but be uninitialized
+            pass
     return fit_params_dict
 
 
@@ -137,21 +141,27 @@ def _load_estimator_from_group(hdf_file, group, fitted):
 
         # TODO: add subgroups to user_attrs
 
+        assert not [p for p in user_attrs if p.startswith("_")]
         mod = __import__(module_name, fromlist=[class_name])
         klass = getattr(mod, class_name)
         estimator = klass(**user_attrs)
 
         if fitted:
             fit_group = group[FIT_GROUP]
-            assert (
-                hdf_file.get_node_attr(fit_group, "__type__")
-                == GroupType.FITTED_ATTRIBUTES.name
-            )
             fit_user_attrs = _get_user_attrs(fit_group)
+            assert (
+                GroupType[fit_user_attrs.pop("__type__")] == GroupType.FITTED_ATTRIBUTES
+            )
             # TODO: add subgroups to fit_user_attrs
 
+            assert not [p for p in fit_user_attrs if p.startswith("_")]
             for k, v in fit_user_attrs.items():
-                setattr(estimator, k, v)
+                assert not k.startswith("_")
+                try:
+                    setattr(estimator, k, v)
+                except AttributeError:
+                    # some attributes might be read only
+                    pass
 
         return estimator
 
