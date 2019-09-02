@@ -1,4 +1,7 @@
+from collections.abc import Iterable, Mapping
+
 import numpy as np
+import pytest
 import tables
 from sklearn.preprocessing import OneHotEncoder
 
@@ -9,44 +12,66 @@ def test_version():
     assert __version__ == "0.0.0"
 
 
-def test_save(tmp_path):
-    est = OneHotEncoder(handle_unknown="ignore")
-    X = [["Male", 1], ["Female", 3], ["Female", 2]]
-    est.fit(X)
+def is_equal(a, b):
+    if a is None:
+        return b is None
+    try:
+        return bool(a == b)
+    except ValueError as e:  # trying to compare numpy arrays
+        if type(a) != type(b):
+            return False
+        if isinstance(a, np.ndarray):
+            return np.all(a == b)
+        elif isinstance(a, Mapping):
+            return (list(a.keys()) == list(b.keys())) and all(
+                is_equal(a[k], b[k]) for k in a
+            )
+        elif isinstance(a, Iterable):
+            return all(is_equal(a0, b0) for (a0, b0) in zip(a, b))
+        else:
+            raise RuntimeError("unexpected compare") from e
+
+
+def get_onehotencoder():
+    enc = OneHotEncoder(handle_unknown="ignore")
+    data = [["Male", 1], ["Female", 3], ["Female", 2]]
+    enc.fit(data)
+    return enc, ["handle_unknown"], ["categories_", "drop_idx_"]
+
+
+@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", [get_onehotencoder()])
+def test_save(tmp_path, estimator, attr_names, fit_attr_names):
     fn = tmp_path / "est.hdf5"
-    alumni.save_estimator(fn, est, fitted=True)
+    alumni.save_estimator(fn, estimator, fitted=True)
 
     with tables.open_file(str(fn), "r") as h:
+        # check root
         root_attrs = h.root._v_attrs
         assert root_attrs["protocol_name"] == alumni.PROTOCOL_NAME
         assert root_attrs["protocol_version"] == alumni.PROTOCOL_VERSION
 
+        # check estimator attrs
         est_attrs = h.root[alumni.ESTIMATOR_GROUP]._v_attrs
         assert (
             est_attrs["__class_name__"]
-            == "sklearn.preprocessing._encoders.OneHotEncoder"
+            == f"{estimator.__class__.__module__}.{estimator.__class__.__name__}"
         )
         assert est_attrs["__type__"] == alumni.GroupType.ESTIMATOR.name
-        assert est_attrs["handle_unknown"] == "ignore"
+        for attr_name in attr_names:
+            assert is_equal(est_attrs[attr_name], getattr(estimator, attr_name))
 
+        # check fit attrs
         fit_attrs = h.root[alumni.ESTIMATOR_GROUP][alumni.FIT_GROUP]._v_attrs
         assert fit_attrs["__type__"] == alumni.GroupType.FITTED_ATTRIBUTES.name
-        categories_0, categories_1 = fit_attrs["categories_"]
-        assert (categories_0 == np.array(["Female", "Male"], dtype=object)).all()
-        assert (categories_1 == np.array([1, 2, 3], dtype=object)).all()
-
-        assert fit_attrs["drop_idx_"] is None
+        for attr_name in fit_attr_names:
+            assert is_equal(fit_attrs[attr_name], getattr(estimator, attr_name))
 
 
-def test_load(tmp_path):
-    est = OneHotEncoder(handle_unknown="ignore")
-    X = [["Male", 1], ["Female", 3], ["Female", 2]]
-    est.fit(X)
+@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", [get_onehotencoder()])
+def test_load(tmp_path, estimator, attr_names, fit_attr_names):
     fn = tmp_path / "est.hdf5"
-    alumni.save_estimator(fn, est, fitted=True)
+    alumni.save_estimator(fn, estimator, fitted=True)
     loaded_est = alumni.load_estimator(fn, fitted=True)
-    assert type(loaded_est) == type(est)
-    assert loaded_est.handle_unknown == est.handle_unknown
-    assert len(loaded_est.categories_) == len(est.categories_)
-    assert np.all(loaded_est.categories_[0] == est.categories_[0])
-    assert np.all(loaded_est.categories_[1] == est.categories_[1])
+    assert type(loaded_est) == type(estimator)
+    for attr_name in attr_names + fit_attr_names:
+        assert is_equal(getattr(loaded_est, attr_name), getattr(estimator, attr_name))
