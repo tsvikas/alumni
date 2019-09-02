@@ -36,7 +36,22 @@ def get_onehotencoder():
     enc = OneHotEncoder(handle_unknown="ignore")
     data = [["Male", 1], ["Female", 3], ["Female", 2]]
     enc.fit(data)
-    return enc, ["handle_unknown"], ["categories_", "drop_idx_"]
+    return (
+        enc,
+        ["categories", "drop", "sparse", "dtype", "handle_unknown"]
+        + ["n_values", "categorical_features"],
+        ["categories_", "drop_idx_"],
+    )
+
+
+@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", [get_onehotencoder()])
+def test_param_names(estimator, attr_names, fit_attr_names):
+    assert set(attr_names) == set(alumni.get_params_dict(estimator))
+
+
+@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", [get_onehotencoder()])
+def test_fit_param_names(estimator, attr_names, fit_attr_names):
+    assert set(fit_attr_names) == set(alumni.get_fit_params_dict(estimator))
 
 
 @pytest.mark.parametrize("estimator, attr_names, fit_attr_names", [get_onehotencoder()])
