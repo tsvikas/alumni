@@ -1,12 +1,19 @@
 import numpy as np
 import pytest
+from sklearn.datasets import make_classification
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
+from sklearn.svm import LinearSVC
 
 from alumni import alumni
 
 
 def get_all_estimators():
-    return [get_onehotencoder(), get_polynomialfeatures(), get_standardscaler()]
+    return [
+        get_onehotencoder(),
+        get_polynomialfeatures(),
+        get_standardscaler(),
+        get_linearsvc(),
+    ]
 
 
 def get_onehotencoder():
@@ -40,6 +47,30 @@ def get_standardscaler():
         scaler,
         ["copy", "with_mean", "with_std"],
         ["scale_", "mean_", "var_", "n_samples_seen_"],
+    )
+
+
+def get_linearsvc():
+    X, y = make_classification(n_features=4, random_state=0)
+    clf = LinearSVC(random_state=0, tol=1e-5)
+    clf.fit(X, y)
+    return (
+        clf,
+        [
+            "penalty",
+            "loss",
+            "dual",
+            "tol",
+            "C",
+            "multi_class",
+            "fit_intercept",
+            "intercept_scaling",
+            "class_weight",
+            "verbose",
+            "random_state",
+            "max_iter",
+        ],
+        ["coef_", "intercept_"] + ["classes_", "n_iter_"],
     )
 
 
