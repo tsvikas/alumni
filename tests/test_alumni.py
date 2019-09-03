@@ -15,6 +15,8 @@ def test_version():
 def is_equal(a, b):
     if a is None:
         return b is None
+    if isinstance(a, float) and np.isnan(a):
+        return isinstance(b, float) and np.isnan(b)
     try:
         return bool(a == b)
     except ValueError as e:  # trying to compare numpy arrays
