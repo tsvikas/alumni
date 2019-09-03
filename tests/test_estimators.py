@@ -14,7 +14,7 @@ def get_all_estimators():
         get_polynomialfeatures(),
         get_standardscaler(),
         get_linearsvc(),
-        pytest.param(*get_kneighborsclassifier(), marks=pytest.mark.xfail),
+        get_kneighborsclassifier(),
     ]
 
 
