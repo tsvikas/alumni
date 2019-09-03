@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
 from sklearn.svm import LinearSVC
 
@@ -13,6 +14,7 @@ def get_all_estimators():
         get_polynomialfeatures(),
         get_standardscaler(),
         get_linearsvc(),
+        pytest.param(*get_kneighborsclassifier(), marks=pytest.mark.xfail),
     ]
 
 
@@ -71,6 +73,33 @@ def get_linearsvc():
             "max_iter",
         ],
         ["coef_", "intercept_"] + ["classes_", "n_iter_"],
+    )
+
+
+def get_kneighborsclassifier():
+    neigh = KNeighborsClassifier(n_neighbors=3)
+    X = [[0], [1], [2], [3]]
+    y = [0, 0, 1, 1]
+    neigh.fit(X, y)
+    return (
+        neigh,
+        [
+            "n_neighbors",
+            "weights",
+            "algorithm",
+            "leaf_size",
+            "p",
+            "metric",
+            "metric_params",
+            "n_jobs",
+        ],
+        [
+            "classes_",
+            "effective_metric_",
+            "effective_metric_params_",
+            "outputs_2d_",
+            "_y",
+        ],
     )
 
 
