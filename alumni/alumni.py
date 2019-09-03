@@ -122,7 +122,7 @@ def _load_estimator_from_group(hdf_file, group, fitted):
 
         # TODO: add subgroups to user_attrs
 
-        assert not [p for p in user_attrs if p.startswith("_")]
+        assert not [p for p in user_attrs if p.startswith("__")]
         mod = __import__(module_name, fromlist=[class_name])
         klass = getattr(mod, class_name)
         estimator = klass(**user_attrs)
@@ -135,9 +135,8 @@ def _load_estimator_from_group(hdf_file, group, fitted):
             )
             # TODO: add subgroups to fit_user_attrs
 
-            assert not [p for p in fit_user_attrs if p.startswith("_")]
+            assert not [p for p in fit_user_attrs if p.startswith("__")]
             for k, v in fit_user_attrs.items():
-                assert not k.startswith("_")
                 try:
                     setattr(estimator, k, v)
                 except AttributeError:
