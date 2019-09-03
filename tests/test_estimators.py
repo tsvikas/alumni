@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
+from sklearn.decomposition import PCA
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
 from sklearn.svm import LinearSVC
@@ -15,6 +16,7 @@ def get_all_estimators():
         get_standardscaler(),
         get_linearsvc(),
         get_kneighborsclassifier(),
+        get_pca(),
     ]
 
 
@@ -100,6 +102,34 @@ def get_kneighborsclassifier():
             "outputs_2d_",
             "_y",
         ],
+    )
+
+
+def get_pca():
+    pca = PCA(n_components=2)
+    data = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+    pca.fit(data)
+    return (
+        pca,
+        [
+            "n_components",
+            "copy",
+            "whiten",
+            "svd_solver",
+            "tol",
+            "iterated_power",
+            "random_state",
+        ],
+        [
+            "components_",
+            "explained_variance_",
+            "explained_variance_ratio_",
+            "singular_values_",
+            "mean_",
+            "n_components_",
+            "noise_variance_",
+        ]
+        + ["n_features_", "n_samples_", "singular_values_"],
     )
 
 
