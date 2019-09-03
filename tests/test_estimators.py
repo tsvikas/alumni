@@ -5,7 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
 from sklearn.svm import LinearSVC
 
-from alumni import alumni
+from alumni import estimators
 
 
 def get_all_estimators():
@@ -105,9 +105,9 @@ def get_kneighborsclassifier():
 
 @pytest.mark.parametrize("estimator, attr_names, fit_attr_names", get_all_estimators())
 def test_param_names(estimator, attr_names, fit_attr_names):
-    assert set(attr_names) == set(alumni.get_params_dict(estimator))
+    assert set(attr_names) == set(estimators.get_params_dict(estimator))
 
 
 @pytest.mark.parametrize("estimator, attr_names, fit_attr_names", get_all_estimators())
 def test_fit_param_names(estimator, attr_names, fit_attr_names):
-    assert set(fit_attr_names) == set(alumni.get_fit_params_dict(estimator))
+    assert set(fit_attr_names) == set(estimators.get_fit_params_dict(estimator))

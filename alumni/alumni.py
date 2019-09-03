@@ -1,8 +1,9 @@
 import enum
-import warnings
 from pathlib import Path
 
 import tables
+
+from alumni.estimators import get_params_dict, get_fit_params_dict
 
 PROTOCOL_NAME = "sklearn-hdf5"
 PROTOCOL_VERSION = "0.1"
@@ -51,29 +52,6 @@ def _save_estimator_to_group(hdf_file, group, estimator, fitted):
         # save fit params
         fit_params_dict = get_fit_params_dict(estimator)
         _save_params_to_group(hdf_file, fit_group, fit_params_dict, fitted)
-
-
-def get_params_dict(estimator):
-    params_dict = estimator.get_params(deep=False)
-    return params_dict
-
-
-def get_fit_params_dict(estimator):
-    fit_param_names = [
-        p for p in dir(estimator) if p.endswith("_") and not p.endswith("__")
-    ]
-    assert not [p for p in fit_param_names if p.startswith("_")]
-
-    fit_params_dict = {}
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        for param_name in fit_param_names:
-            try:
-                fit_params_dict[param_name] = getattr(estimator, param_name)
-            except AttributeError:
-                # some attributes might exist (since they are properties) but be uninitialized
-                pass
-    return fit_params_dict
 
 
 def _save_params_to_group(hdf_file, group, params_dict, fitted):
