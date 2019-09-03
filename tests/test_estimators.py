@@ -174,6 +174,11 @@ def get_estimator(estimator_sample):
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
 def test_fit_param_names(estimator_sample):
     estimator = get_estimator(estimator_sample)
+    # check type
+    if estimator_sample.estimator_kind is not None:
+        estimator_func = getattr(estimator, estimator_sample.estimator_kind.name)
+        estimator_func(estimator_sample.X)
+    # check fit_param_names
     fit_param_names = set(estimator_sample.fit_param_names)
     estimator_fit_attr_names = set(estimators.get_fit_params_dict(estimator))
     if not fit_param_names.issubset(estimator_fit_attr_names):
