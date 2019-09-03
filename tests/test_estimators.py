@@ -168,18 +168,18 @@ ESTIMATORS = [
 ]
 
 
-def get_all_estimators():
-    ret = []
-    for e in ESTIMATORS:
-        est = e.estimator_class(**e.estimator_init_kwargs)
-        est.fit(e.X, e.y)
-        ret.append((est, e.fit_param_names))
-    return ret
+def get_estimator(estimator_sample):
+    estimator = estimator_sample.estimator_class(
+        **estimator_sample.estimator_init_kwargs
+    )
+    estimator.fit(estimator_sample.X, estimator_sample.y)
+    return estimator
 
 
-@pytest.mark.parametrize("estimator, fit_attr_names", get_all_estimators())
-def test_fit_param_names(estimator, fit_attr_names):
-    fit_param_names = set(fit_attr_names)
+@pytest.mark.parametrize("estimator_sample", ESTIMATORS)
+def test_fit_param_names(estimator_sample):
+    estimator = get_estimator(estimator_sample)
+    fit_param_names = set(estimator_sample.fit_param_names)
     estimator_fit_attr_names = set(estimators.get_fit_params_dict(estimator))
     if not fit_param_names.issubset(estimator_fit_attr_names):
         # if it's not a subset, this assert is False, it's here to allow easier readability in pytest
