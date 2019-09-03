@@ -1,4 +1,5 @@
 import enum
+import warnings
 from pathlib import Path
 
 import tables
@@ -64,12 +65,14 @@ def get_fit_params_dict(estimator):
     assert not [p for p in fit_param_names if p.startswith("_")]
 
     fit_params_dict = {}
-    for param_name in fit_param_names:
-        try:
-            fit_params_dict[param_name] = getattr(estimator, param_name)
-        except AttributeError:
-            # some attributes might exist (since they are properties) but be uninitialized
-            pass
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        for param_name in fit_param_names:
+            try:
+                fit_params_dict[param_name] = getattr(estimator, param_name)
+            except AttributeError:
+                # some attributes might exist (since they are properties) but be uninitialized
+                pass
     return fit_params_dict
 
 
