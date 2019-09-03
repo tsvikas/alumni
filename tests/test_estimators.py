@@ -1,10 +1,20 @@
 import numpy as np
 import pytest
+from sklearn.cluster import SpectralBiclustering
+from sklearn.datasets import load_digits
 from sklearn.datasets import make_classification
+from sklearn.datasets import make_regression
 from sklearn.decomposition import PCA
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import ElasticNetCV
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import RadiusNeighborsRegressor
 from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import RobustScaler
 from sklearn.svm import LinearSVC
+from sklearn.svm import NuSVR
 
 from alumni import estimators
 
@@ -17,6 +27,14 @@ def get_all_estimators():
         get_linearsvc(),
         get_kneighborsclassifier(),
         get_pca(),
+        get_robustscaler(),
+        get_nusvr(),
+        get_radiusneighborsregressor(),
+        get_elasticnetcv(),
+        pytest.param(*get_simpleimputer(), marks=pytest.mark.xfail),
+        pytest.param(*get_selectkbest(), marks=pytest.mark.xfail),
+        get_hashingvectorizer(),
+        get_spectralbiclustering(),
     ]
 
 
@@ -116,6 +134,87 @@ def get_pca():
             "random_state",
         ],
         ["components_", "mean_"],
+    )
+
+
+def get_robustscaler():
+    transformer = RobustScaler()
+    data = [[1.0, -2.0, 2.0], [-2.0, 1.0, 3.0], [4.0, 1.0, -2.0]]
+    transformer.fit(data)
+    return transformer, list(transformer.get_params()), ["center_", "scale_"]
+
+
+def get_nusvr():
+    n_samples, n_features = 10, 5
+    np.random.seed(0)
+    y = np.random.randn(n_samples)
+    X = np.random.randn(n_samples, n_features)
+    clf = NuSVR(gamma="scale", C=1.0, nu=0.1)
+    clf.fit(X, y)
+    return clf, list(clf.get_params()), ["_sparse", "_gamma"]
+
+
+def get_radiusneighborsregressor():
+    neigh = RadiusNeighborsRegressor(radius=1.0)
+    X = [[0], [1], [2], [3]]
+    y = [0, 0, 1, 1]
+    neigh.fit(X, y)
+    return neigh, list(neigh.get_params()), ["_y"]
+
+
+def get_elasticnetcv():
+    regr = ElasticNetCV(cv=5, random_state=0)
+    X, y = make_regression(n_features=2, random_state=0)
+    regr.fit(X, y)
+    return (
+        regr,
+        list(regr.get_params()),
+        [
+            "mse_path_",
+            "l1_ratio_",
+            "alphas_",
+            "coef_",
+            "intercept_",
+            "dual_gap_",
+            "n_iter_",
+        ],
+    )
+
+
+def get_simpleimputer():
+    imp_mean = SimpleImputer(missing_values=np.nan, strategy="mean")
+    data = [[7, 2, 3], [4, np.nan, 6], [10, 5, 9]]
+    imp_mean.fit(data)
+    return imp_mean, list(imp_mean.get_params()), ["statistics_", "indicator_"]
+
+
+def get_selectkbest():
+    sel = SelectKBest(chi2, k=20)
+    X, y = load_digits(return_X_y=True)
+    sel.fit(X, y)
+    return sel, list(sel.get_params()), ["scores_", "pvalues_"]
+
+
+def get_hashingvectorizer():
+    vectorizer = HashingVectorizer(n_features=2 ** 4)
+    corpus = [
+        "This is the first document.",
+        "This document is the second document.",
+        "And this is the third one.",
+        "Is this the first document?",
+    ]
+    vectorizer.fit(corpus)
+    return vectorizer, list(vectorizer.get_params()), []
+
+
+def get_spectralbiclustering():
+    clustering = SpectralBiclustering(n_clusters=2, random_state=0)
+    data = np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]])
+    clustering.fit(data)
+    return (
+        clustering,
+        list(clustering.get_params()),
+        ["row_labels_", "column_labels_", "rows_", "columns_"],
     )
 
 
