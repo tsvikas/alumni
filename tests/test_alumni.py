@@ -10,8 +10,9 @@ def test_version():
     assert __version__ == "0.0.0"
 
 
-@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", get_all_estimators())
-def test_save(tmp_path, estimator, attr_names, fit_attr_names):
+@pytest.mark.parametrize("estimator, fit_attr_names", get_all_estimators())
+def test_save(tmp_path, estimator, fit_attr_names):
+    attr_names = list(estimator.get_params())
     fn = tmp_path / "est.hdf5"
     alumni.save_estimator(fn, estimator, fitted=True)
 
@@ -38,8 +39,9 @@ def test_save(tmp_path, estimator, attr_names, fit_attr_names):
             np.testing.assert_equal(fit_attrs[attr_name], getattr(estimator, attr_name))
 
 
-@pytest.mark.parametrize("estimator, attr_names, fit_attr_names", get_all_estimators())
-def test_load(tmp_path, estimator, attr_names, fit_attr_names):
+@pytest.mark.parametrize("estimator, fit_attr_names", get_all_estimators())
+def test_load(tmp_path, estimator, fit_attr_names):
+    attr_names = list(estimator.get_params())
     fn = tmp_path / "est.hdf5"
     alumni.save_estimator(fn, estimator, fitted=True)
     loaded_est = alumni.load_estimator(fn, fitted=True)
