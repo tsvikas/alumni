@@ -1,3 +1,6 @@
+import enum
+from typing import NamedTuple, List, Any, Dict, Optional
+
 import numpy as np
 import pytest
 from sklearn.cluster import SpectralBiclustering
@@ -19,103 +22,102 @@ from sklearn.svm import NuSVR
 from alumni import estimators
 
 
-def get_all_estimators():
-    return [
-        get_onehotencoder(),
-        get_polynomialfeatures(),
-        get_standardscaler(),
-        get_linearsvc(),
-        get_kneighborsclassifier(),
-        get_pca(),
-        get_robustscaler(),
-        get_nusvr(),
-        get_radiusneighborsregressor(),
-        get_elasticnetcv(),
-        get_simpleimputer(),
-        get_selectkbest(),
-        get_hashingvectorizer(),
-        get_spectralbiclustering(),
-    ]
+class EstimatorKind(enum.Enum):
+    transform = 1
+    predict = 2
+    predict_proba = 3
 
 
-def get_onehotencoder():
-    enc = OneHotEncoder(handle_unknown="ignore")
-    data = [["Male", 1], ["Female", 3], ["Female", 2]]
-    enc.fit(data)
-    return enc, ["categories_", "drop_idx_"]
+class EstimatorSample(NamedTuple):
+    estimator_class: type
+    estimator_init_kwargs: Dict[str, Any]
+    estimator_kind: Optional[EstimatorKind]
+    fit_param_names: List[str]
+    X: Any
+    y: Any
+
+    @property
+    def name(self):
+        return self.estimator_class.__name__
 
 
-def get_polynomialfeatures():
-    poly = PolynomialFeatures(2)
-    data = np.arange(6).reshape(3, 2)
-    poly.fit(data)
-    return poly, ["n_input_features_", "n_output_features_"]
-
-
-def get_standardscaler():
-    scaler = StandardScaler()
-    data = [[0, 0], [0, 0], [1, 1], [1, 1]]
-    scaler.fit(data)
-    return (
-        scaler,
+ESTIMATORS = [
+    EstimatorSample(
+        OneHotEncoder,
+        dict(handle_unknown="ignore"),
+        EstimatorKind.transform,
+        ["categories_", "drop_idx_"],
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
+    ),
+    EstimatorSample(
+        PolynomialFeatures,
+        dict(degree=2),
+        EstimatorKind.transform,
+        ["n_input_features_", "n_output_features_"],
+        np.arange(6).reshape(3, 2),
+        None,
+    ),
+    EstimatorSample(
+        StandardScaler,
+        dict(),
+        EstimatorKind.transform,
         ["scale_", "mean_"]  # used in fit
         + ["var_", "n_samples_seen_"],  # used in partial_fit
-    )
-
-
-def get_linearsvc():
-    X, y = make_classification(n_features=4, random_state=0)
-    clf = LinearSVC(random_state=0, tol=1e-5)
-    clf.fit(X, y)
-    return clf, ["coef_", "intercept_"] + ["classes_"]
-
-
-def get_kneighborsclassifier():
-    neigh = KNeighborsClassifier(n_neighbors=3)
-    X = [[0], [1], [2], [3]]
-    y = [0, 0, 1, 1]
-    neigh.fit(X, y)
-    return neigh, ["classes_", "effective_metric_", "outputs_2d_", "_y"]
-
-
-def get_pca():
-    pca = PCA(n_components=2)
-    data = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
-    pca.fit(data)
-    return pca, ["components_", "mean_"]
-
-
-def get_robustscaler():
-    transformer = RobustScaler()
-    data = [[1.0, -2.0, 2.0], [-2.0, 1.0, 3.0], [4.0, 1.0, -2.0]]
-    transformer.fit(data)
-    return transformer, ["center_", "scale_"]
-
-
-def get_nusvr():
-    n_samples, n_features = 10, 5
-    np.random.seed(0)
-    y = np.random.randn(n_samples)
-    X = np.random.randn(n_samples, n_features)
-    clf = NuSVR(gamma="scale", C=1.0, nu=0.1)
-    clf.fit(X, y)
-    return clf, ["_sparse", "_gamma"]
-
-
-def get_radiusneighborsregressor():
-    neigh = RadiusNeighborsRegressor(radius=1.0)
-    X = [[0], [1], [2], [3]]
-    y = [0, 0, 1, 1]
-    neigh.fit(X, y)
-    return neigh, ["_y"]
-
-
-def get_elasticnetcv():
-    regr = ElasticNetCV(cv=5, random_state=0)
-    X, y = make_regression(n_features=2, random_state=0)
-    regr.fit(X, y)
-    return (
-        regr,
+        [[0, 0], [0, 0], [1, 1], [1, 1]],
+        None,
+    ),
+    EstimatorSample(
+        LinearSVC,
+        dict(random_state=0, tol=1e-5),
+        EstimatorKind.predict,
+        ["coef_", "intercept_"] + ["classes_"],
+        *make_classification(n_features=4, random_state=0),
+    ),
+    EstimatorSample(
+        KNeighborsClassifier,
+        dict(n_neighbors=3),
+        EstimatorKind.predict_proba,
+        ["classes_", "effective_metric_", "outputs_2d_", "_y"],
+        [[0], [1], [2], [3]],
+        [0, 0, 1, 1],
+    ),
+    EstimatorSample(
+        PCA,
+        dict(n_components=2),
+        EstimatorKind.transform,
+        ["components_", "mean_"],
+        np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]]),
+        None,
+    ),
+    EstimatorSample(
+        RobustScaler,
+        dict(),
+        EstimatorKind.transform,
+        ["center_", "scale_"],
+        [[1.0, -2.0, 2.0], [-2.0, 1.0, 3.0], [4.0, 1.0, -2.0]],
+        None,
+    ),
+    EstimatorSample(
+        NuSVR,
+        dict(gamma="scale", C=1.0, nu=0.1),
+        EstimatorKind.predict,
+        ["_sparse", "_gamma"],
+        np.arange(50).reshape((10, 5)),
+        np.arange(10),
+    ),
+    EstimatorSample(
+        RadiusNeighborsRegressor,
+        dict(radius=1.0),
+        EstimatorKind.predict,
+        ["_y"],
+        [[0], [1], [2], [3]],
+        [0, 0, 1, 1],
+    ),
+    EstimatorSample(
+        ElasticNetCV,
+        dict(cv=5, random_state=0),
+        EstimatorKind.predict,
         [
             "mse_path_",
             "l1_ratio_",
@@ -125,40 +127,54 @@ def get_elasticnetcv():
             "dual_gap_",
             "n_iter_",
         ],
-    )
+        *make_regression(n_features=2, random_state=0),
+    ),
+    EstimatorSample(
+        SimpleImputer,
+        dict(missing_values=np.nan, strategy="mean"),
+        EstimatorKind.transform,
+        ["statistics_", "indicator_"],
+        [[7, 2, 3], [4, np.nan, 6], [10, 5, 9]],
+        None,
+    ),
+    EstimatorSample(
+        SelectKBest,
+        dict(score_func=chi2, k=20),
+        EstimatorKind.transform,
+        ["scores_", "pvalues_"],
+        *load_digits(return_X_y=True),
+    ),
+    EstimatorSample(
+        HashingVectorizer,
+        dict(n_features=2 ** 4),
+        EstimatorKind.transform,
+        [],  # no params are fitted
+        [
+            "This is the first document.",
+            "This document is the second document.",
+            "And this is the third one.",
+            "Is this the first document?",
+        ],
+        None,
+    ),
+    EstimatorSample(
+        SpectralBiclustering,
+        dict(n_clusters=2, random_state=0),
+        None,
+        ["row_labels_", "column_labels_", "rows_", "columns_"],
+        np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]]),
+        None,
+    ),
+]
 
 
-def get_simpleimputer():
-    imp_mean = SimpleImputer(missing_values=np.nan, strategy="mean")
-    data = [[7, 2, 3], [4, np.nan, 6], [10, 5, 9]]
-    imp_mean.fit(data)
-    return imp_mean, ["statistics_", "indicator_"]
-
-
-def get_selectkbest():
-    sel = SelectKBest(chi2, k=20)
-    X, y = load_digits(return_X_y=True)
-    sel.fit(X, y)
-    return sel, ["scores_", "pvalues_"]
-
-
-def get_hashingvectorizer():
-    vectorizer = HashingVectorizer(n_features=2 ** 4)
-    corpus = [
-        "This is the first document.",
-        "This document is the second document.",
-        "And this is the third one.",
-        "Is this the first document?",
-    ]
-    vectorizer.fit(corpus)
-    return vectorizer, []
-
-
-def get_spectralbiclustering():
-    clustering = SpectralBiclustering(n_clusters=2, random_state=0)
-    data = np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]])
-    clustering.fit(data)
-    return clustering, ["row_labels_", "column_labels_", "rows_", "columns_"]
+def get_all_estimators():
+    ret = []
+    for e in ESTIMATORS:
+        est = e.estimator_class(**e.estimator_init_kwargs)
+        est.fit(e.X, e.y)
+        ret.append((est, e.fit_param_names))
+    return ret
 
 
 @pytest.mark.parametrize("estimator, fit_attr_names", get_all_estimators())
