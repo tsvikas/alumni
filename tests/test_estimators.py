@@ -32,7 +32,7 @@ def get_all_estimators():
         get_radiusneighborsregressor(),
         get_elasticnetcv(),
         get_simpleimputer(),
-        pytest.param(*get_selectkbest(), marks=pytest.mark.xfail),
+        get_selectkbest(),
         get_hashingvectorizer(),
         get_spectralbiclustering(),
     ]
