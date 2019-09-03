@@ -39,7 +39,7 @@ def get_polynomialfeatures():
     return (
         poly,
         ["degree", "interaction_only", "include_bias", "order"],
-        ["n_input_features_", "n_output_features_"] + ["powers_"],
+        ["n_input_features_", "n_output_features_"],
     )
 
 
@@ -50,7 +50,8 @@ def get_standardscaler():
     return (
         scaler,
         ["copy", "with_mean", "with_std"],
-        ["scale_", "mean_", "var_", "n_samples_seen_"],
+        ["scale_", "mean_"]  # used in fit
+        + ["var_", "n_samples_seen_"],  # used in partial_fit
     )
 
 
@@ -74,7 +75,7 @@ def get_linearsvc():
             "random_state",
             "max_iter",
         ],
-        ["coef_", "intercept_"] + ["classes_", "n_iter_"],
+        ["coef_", "intercept_"] + ["classes_"],
     )
 
 
@@ -95,13 +96,7 @@ def get_kneighborsclassifier():
             "metric_params",
             "n_jobs",
         ],
-        [
-            "classes_",
-            "effective_metric_",
-            "effective_metric_params_",
-            "outputs_2d_",
-            "_y",
-        ],
+        ["classes_", "effective_metric_", "outputs_2d_", "_y"],
     )
 
 
@@ -120,16 +115,7 @@ def get_pca():
             "iterated_power",
             "random_state",
         ],
-        [
-            "components_",
-            "explained_variance_",
-            "explained_variance_ratio_",
-            "singular_values_",
-            "mean_",
-            "n_components_",
-            "noise_variance_",
-        ]
-        + ["n_features_", "n_samples_", "singular_values_"],
+        ["components_", "mean_"],
     )
 
 
@@ -140,4 +126,8 @@ def test_param_names(estimator, attr_names, fit_attr_names):
 
 @pytest.mark.parametrize("estimator, attr_names, fit_attr_names", get_all_estimators())
 def test_fit_param_names(estimator, attr_names, fit_attr_names):
-    assert set(fit_attr_names) == set(estimators.get_fit_params_dict(estimator))
+    fit_param_names = set(fit_attr_names)
+    estimator_fit_attr_names = set(estimators.get_fit_params_dict(estimator))
+    if not fit_param_names.issubset(estimator_fit_attr_names):
+        # if it's not a subset, this assert is False, it's here to allow easier readability in pytest
+        assert fit_param_names == estimator_fit_attr_names
