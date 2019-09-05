@@ -96,7 +96,7 @@ def load_estimator(filename, fitted=True):
         assert hdf_file.get_node_attr("/", "protocol_version") == PROTOCOL_VERSION
         # load estimator
         group = hdf_file.get_node("/")[ESTIMATOR_GROUP]
-        estimator = _load_estimator_from_group(hdf_file, group, fitted=fitted)
+        estimator = _load_estimator_from_group(group, fitted=fitted)
         return estimator
 
 
@@ -111,7 +111,7 @@ def _get_user_attrs(group):
     return user_attrs
 
 
-def _load_estimator_from_group(hdf_file, group, fitted):
+def _load_estimator_from_group(group, fitted):
     user_attrs = _get_user_attrs(group)
 
     group_type = GroupType[user_attrs.pop("__type__")]
