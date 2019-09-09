@@ -38,6 +38,12 @@ class EstimatorSample(NamedTuple):
     def name(self):
         return self.estimator_class.__name__
 
+    @property
+    def kind(self):
+        if self.estimator_kind is None:
+            return None
+        return self.estimator_kind.name
+
 
 ESTIMATORS = [
     EstimatorSample(
