@@ -1,5 +1,5 @@
 import enum
-from typing import NamedTuple, List, Any, Dict, Optional
+from typing import NamedTuple, List, Any, Dict, Optional, Union, Callable
 
 import numpy as np
 import pytest
@@ -25,7 +25,7 @@ class EstimatorKind(enum.Enum):
 
 class EstimatorSample(NamedTuple):
     estimator_class: type
-    estimator_init_kwargs: Dict[str, Any]
+    estimator_init_kwargs: Union[Dict[str, Any], Callable]
     estimator_kind: Optional[EstimatorKind]
     fit_param_names: List[str]
     X: Any
@@ -164,9 +164,11 @@ ESTIMATORS = [
 
 
 def get_estimator(estimator_sample):
-    estimator = estimator_sample.estimator_class(
-        **estimator_sample.estimator_init_kwargs
-    )
+    if callable(estimator_sample.estimator_init_kwargs):
+        init_kwargs = estimator_sample.estimator_init_kwargs()
+    else:
+        init_kwargs = estimator_sample.estimator_init_kwargs
+    estimator = estimator_sample.estimator_class(**init_kwargs)
     estimator.fit(estimator_sample.X, estimator_sample.y)
     return estimator
 
