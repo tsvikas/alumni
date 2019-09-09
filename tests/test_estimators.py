@@ -4,6 +4,7 @@ from typing import NamedTuple, List, Any, Dict, Optional, Union, Callable
 import numpy as np
 import pytest
 from sklearn import cluster
+from sklearn import compose
 from sklearn import datasets
 from sklearn import decomposition
 from sklearn import feature_extraction
@@ -190,6 +191,19 @@ ESTIMATORS = [
         EstimatorKind.transform,
         [],  # all fitted params are deep
         [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
+    ),
+    EstimatorSample(
+        compose.ColumnTransformer,
+        lambda: dict(
+            transformers=[
+                ("norm1", preprocessing.Normalizer(norm="l1"), [0, 1]),
+                ("norm2", preprocessing.Normalizer(norm="l1"), slice(2, 4)),
+            ]
+        ),
+        EstimatorKind.transform,
+        ["sparse_output_", "transformers_", "_columns", "_remainder", "_n_features"],
+        np.array([[0.0, 1.0, 2.0, 2.0], [1.0, 1.0, 0.0, 1.0]]),
         None,
     ),
 ]

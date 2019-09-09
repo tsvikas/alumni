@@ -28,7 +28,8 @@ def test_save(tmp_path, estimator_sample):
         assert root_attrs["protocol_version"] == alumni.PROTOCOL_VERSION
 
         # check estimator attrs
-        est_attrs = h.root[alumni.ESTIMATOR_GROUP]._v_attrs
+        est_group = h.root[alumni.ESTIMATOR_GROUP]
+        est_attrs = est_group._v_attrs
         assert (
             est_attrs["__class_name__"]
             == f"{estimator.__class__.__module__}.{estimator.__class__.__name__}"
@@ -36,18 +37,23 @@ def test_save(tmp_path, estimator_sample):
         assert est_attrs["__type__"] == alumni.GroupType.ESTIMATOR.name
         for attr_name in estimator.get_params(deep=False):
             orig_param = getattr(estimator, attr_name)
-            if alumni.is_list_of_named_estimators(orig_param):
-                # recursive estimator - only check for existence. skip check for identity
-                assert attr_name in h.root[alumni.ESTIMATOR_GROUP]
-            else:
-                saved_param = est_attrs[attr_name]
-                assert_equal(saved_param, orig_param)
+            assert_param_saved(orig_param, attr_name, est_group)
 
         # check fit attrs
-        fit_attrs = h.root[alumni.ESTIMATOR_GROUP][alumni.FIT_GROUP]._v_attrs
+        fit_group = est_group[alumni.FIT_GROUP]
+        fit_attrs = fit_group._v_attrs
         assert fit_attrs["__type__"] == alumni.GroupType.FITTED_ATTRIBUTES.name
         for attr_name in estimator_sample.fit_param_names:
-            assert_equal(fit_attrs[attr_name], getattr(estimator, attr_name))
+            orig_param = getattr(estimator, attr_name)
+            assert_param_saved(orig_param, attr_name, fit_group)
+
+
+def assert_param_saved(param, param_name, group):
+    if alumni.is_list_of_named_estimators(param):
+        # recursive estimator - only check for existence. skip check for identity
+        assert param_name in group
+    else:
+        assert_equal(group._v_attrs[param_name], param)
 
 
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
