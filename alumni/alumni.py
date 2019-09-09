@@ -64,6 +64,8 @@ def _save_params_to_group(hdf_file, group, params_dict, fitted):
         elif is_list_of_named_estimators(param_value):
             param_group = hdf_file.create_group(group, param_name)
             _save_list_of_named_estimators(hdf_file, param_group, param_value, fitted)
+        elif is_list_of_estimators(param_value):
+            raise NotImplementedError("Saving list of estimators")
         else:
             hdf_file.set_node_attr(group, param_name, param_value)
 
@@ -79,6 +81,12 @@ def is_list_of_named_estimators(param_value):
         and isinstance(param_value[0], tuple)
         and len(param_value[0]) >= 2
         and is_estimator(param_value[0][1])
+    )
+
+
+def is_list_of_estimators(param_value):
+    return (
+        isinstance(param_value, list) and param_value and is_estimator(param_value[0])
     )
 
 
