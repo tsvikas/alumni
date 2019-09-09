@@ -219,6 +219,15 @@ ESTIMATORS = [
         ),
         marks=pytest.mark.xfail(reason="NotImplemented: list of estimators"),
     ),
+    EstimatorSample(
+        feature_selection.RFE,
+        lambda: dict(
+            estimator=svm.SVR(kernel="linear"), n_features_to_select=5, step=1
+        ),
+        EstimatorKind.predict,  # defined by the svm.SVR estimator
+        ["n_features_", "support_", "ranking_", "estimator_"],
+        *datasets.make_friedman1(n_samples=50, n_features=10, random_state=0),
+    ),
 ]
 
 

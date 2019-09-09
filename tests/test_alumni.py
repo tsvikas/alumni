@@ -49,7 +49,7 @@ def test_save(tmp_path, estimator_sample):
 
 
 def assert_param_saved(param, param_name, group):
-    if alumni.is_list_of_named_estimators(param):
+    if alumni.is_list_of_named_estimators(param) or alumni.is_estimator(param):
         # recursive estimator - only check for existence. skip check for identity
         assert param_name in group
     else:
