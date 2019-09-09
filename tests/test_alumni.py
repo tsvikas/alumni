@@ -51,7 +51,7 @@ def test_load(tmp_path, estimator_sample):
     # load estimator and check it
     fit_attr_names = estimator_sample.fit_param_names
     attr_names = list(estimator.get_params())
-    loaded_est = alumni.load_estimator(fn, fitted=True)
+    loaded_est = alumni.load_estimator(fn)
     assert type(loaded_est) == type(estimator)
     for attr_name in attr_names + fit_attr_names:
         np.testing.assert_equal(

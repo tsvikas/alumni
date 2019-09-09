@@ -89,14 +89,14 @@ def _save_list_of_named_estimators(hdf_file, group, estimator_list, fitted):
         _save_estimator_to_group(hdf_file, sub_group, estimator, fitted)
 
 
-def load_estimator(filename, fitted=True):
+def load_estimator(filename):
     with tables.File(str(filename), mode="r") as hdf_file:
         # check metadata
         assert hdf_file.get_node_attr("/", "protocol_name") == PROTOCOL_NAME
         assert hdf_file.get_node_attr("/", "protocol_version") == PROTOCOL_VERSION
         # load estimator
         group = hdf_file.get_node("/")[ESTIMATOR_GROUP]
-        estimator = _load_estimator_from_group(group, fitted=fitted)
+        estimator = _load_estimator_from_group(group)
         return estimator
 
 
@@ -111,7 +111,7 @@ def _get_user_attrs(group):
     return user_attrs
 
 
-def _load_estimator_from_group(group, fitted):
+def _load_estimator_from_group(group):
     user_attrs = _get_user_attrs(group)
 
     group_type = GroupType[user_attrs.pop("__type__")]
@@ -127,7 +127,7 @@ def _load_estimator_from_group(group, fitted):
         klass = getattr(mod, class_name)
         estimator = klass(**user_attrs)
 
-        if fitted:
+        if FIT_GROUP in group._v_groups:
             fit_group = group[FIT_GROUP]
             fit_user_attrs = _get_user_attrs(fit_group)
             assert (
