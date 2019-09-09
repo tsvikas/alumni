@@ -3,21 +3,16 @@ from typing import NamedTuple, List, Any, Dict, Optional
 
 import numpy as np
 import pytest
-from sklearn.cluster import SpectralBiclustering
-from sklearn.datasets import load_digits
-from sklearn.datasets import make_classification
-from sklearn.datasets import make_regression
-from sklearn.decomposition import PCA
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_selection import SelectKBest, chi2
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import ElasticNetCV
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neighbors import RadiusNeighborsRegressor
-from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures, StandardScaler
-from sklearn.preprocessing import RobustScaler
-from sklearn.svm import LinearSVC
-from sklearn.svm import NuSVR
+from sklearn import cluster
+from sklearn import datasets
+from sklearn import decomposition
+from sklearn import feature_extraction
+from sklearn import feature_selection
+from sklearn import impute
+from sklearn import linear_model
+from sklearn import neighbors
+from sklearn import preprocessing
+from sklearn import svm
 
 from alumni import estimators
 
@@ -43,7 +38,7 @@ class EstimatorSample(NamedTuple):
 
 ESTIMATORS = [
     EstimatorSample(
-        OneHotEncoder,
+        preprocessing.OneHotEncoder,
         dict(handle_unknown="ignore"),
         EstimatorKind.transform,
         ["categories_", "drop_idx_"],
@@ -51,7 +46,7 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        PolynomialFeatures,
+        preprocessing.PolynomialFeatures,
         dict(degree=2),
         EstimatorKind.transform,
         ["n_input_features_", "n_output_features_"],
@@ -59,7 +54,7 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        StandardScaler,
+        preprocessing.StandardScaler,
         dict(),
         EstimatorKind.transform,
         ["scale_", "mean_"]  # used in fit
@@ -68,14 +63,14 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        LinearSVC,
+        svm.LinearSVC,
         dict(random_state=0, tol=1e-5),
         EstimatorKind.predict,
         ["coef_", "intercept_"] + ["classes_"],
-        *make_classification(n_features=4, random_state=0),
+        *datasets.make_classification(n_features=4, random_state=0),
     ),
     EstimatorSample(
-        KNeighborsClassifier,
+        neighbors.KNeighborsClassifier,
         dict(n_neighbors=3),
         EstimatorKind.predict_proba,
         ["classes_", "effective_metric_", "outputs_2d_", "_y"],
@@ -83,7 +78,7 @@ ESTIMATORS = [
         [0, 0, 1, 1],
     ),
     EstimatorSample(
-        PCA,
+        decomposition.PCA,
         dict(n_components=2),
         EstimatorKind.transform,
         ["components_", "mean_"],
@@ -91,7 +86,7 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        RobustScaler,
+        preprocessing.RobustScaler,
         dict(),
         EstimatorKind.transform,
         ["center_", "scale_"],
@@ -99,7 +94,7 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        NuSVR,
+        svm.NuSVR,
         dict(gamma="scale", C=1.0, nu=0.1),
         EstimatorKind.predict,
         ["_sparse", "_gamma"],
@@ -107,7 +102,7 @@ ESTIMATORS = [
         np.arange(10),
     ),
     EstimatorSample(
-        RadiusNeighborsRegressor,
+        neighbors.RadiusNeighborsRegressor,
         dict(radius=1.0),
         EstimatorKind.predict,
         ["_y"],
@@ -115,7 +110,7 @@ ESTIMATORS = [
         [0, 0, 1, 1],
     ),
     EstimatorSample(
-        ElasticNetCV,
+        linear_model.ElasticNetCV,
         dict(cv=5, random_state=0),
         EstimatorKind.predict,
         [
@@ -127,10 +122,10 @@ ESTIMATORS = [
             "dual_gap_",
             "n_iter_",
         ],
-        *make_regression(n_features=2, random_state=0),
+        *datasets.make_regression(n_features=2, random_state=0),
     ),
     EstimatorSample(
-        SimpleImputer,
+        impute.SimpleImputer,
         dict(missing_values=np.nan, strategy="mean"),
         EstimatorKind.transform,
         ["statistics_", "indicator_"],
@@ -138,14 +133,14 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        SelectKBest,
-        dict(score_func=chi2, k=20),
+        feature_selection.SelectKBest,
+        dict(score_func=feature_selection.chi2, k=20),
         EstimatorKind.transform,
         ["scores_", "pvalues_"],
-        *load_digits(return_X_y=True),
+        *datasets.load_digits(return_X_y=True),
     ),
     EstimatorSample(
-        HashingVectorizer,
+        feature_extraction.text.HashingVectorizer,
         dict(n_features=2 ** 4),
         EstimatorKind.transform,
         [],  # no params are fitted
@@ -158,7 +153,7 @@ ESTIMATORS = [
         None,
     ),
     EstimatorSample(
-        SpectralBiclustering,
+        cluster.SpectralBiclustering,
         dict(n_clusters=2, random_state=0),
         None,
         ["row_labels_", "column_labels_", "rows_", "columns_"],
