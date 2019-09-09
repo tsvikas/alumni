@@ -49,7 +49,11 @@ def test_save(tmp_path, estimator_sample):
 
 
 def assert_param_saved(param, param_name, group):
-    if alumni.is_list_of_named_estimators(param) or alumni.is_estimator(param):
+    if (
+        alumni.is_list_of_named_estimators(param)
+        or alumni.is_list_of_estimators(param)
+        or alumni.is_estimator(param)
+    ):
         # recursive estimator - only check for existence. skip check for identity
         assert param_name in group
     else:
@@ -78,6 +82,7 @@ def assert_equal(
     err_msg: Optional[str] = "",
     verbose: Optional[bool] = True,
 ) -> None:
+    # recursively call itself when needed (copied from np.testing.assert_equal)
     __tracebackhide__ = True  # Hide traceback for py.test
     if isinstance(desired, dict):
         if not isinstance(actual, dict):
@@ -93,10 +98,26 @@ def assert_equal(
         for k in range(len(desired)):
             assert_equal(actual[k], desired[k], "item=%r\n%s" % (k, err_msg), verbose)
         return
+    # BaseEstimator doesn't define an __eq__ function, compare it's properties
     if isinstance(desired, sklearn.base.BaseEstimator):
         if not type(actual) == type(desired):
             raise AssertionError(repr(type(actual)))
         assert_equal(actual.__dict__, desired.__dict__, err_msg, verbose)
         return
-
+    # Tree doesn't define an __eq__ function, compare it's properties
+    if isinstance(desired, sklearn.tree.tree.Tree):
+        if not type(actual) == type(desired):
+            raise AssertionError(repr(type(actual)))
+        actual_tree = {
+            k: getattr(actual, k)
+            for k in dir(actual)
+            if not callable(getattr(actual, k))
+        }
+        desired_tree = {
+            k: getattr(desired, k)
+            for k in dir(desired)
+            if not callable(getattr(desired, k))
+        }
+        assert_equal(actual_tree, desired_tree, err_msg, verbose)
+        return
     np.testing.assert_equal(actual, desired, err_msg, verbose)

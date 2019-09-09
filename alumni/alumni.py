@@ -17,6 +17,7 @@ class GroupType(enum.Enum):
     ESTIMATOR = 1
     FITTED_ATTRIBUTES = 2
     LIST_OF_NAMED_ESTIMATORS = 3
+    LIST_OF_ESTIMATORS = 4
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
@@ -65,7 +66,8 @@ def _save_params_to_group(hdf_file, group, params_dict, fitted):
             param_group = hdf_file.create_group(group, param_name)
             _save_list_of_named_estimators(hdf_file, param_group, param_value, fitted)
         elif is_list_of_estimators(param_value):
-            raise NotImplementedError("Saving list of estimators")
+            param_group = hdf_file.create_group(group, param_name)
+            _save_list_of_estimators(hdf_file, param_group, param_value, fitted)
         else:
             hdf_file.set_node_attr(group, param_name, param_value)
 
@@ -88,6 +90,14 @@ def is_list_of_estimators(param_value):
     return (
         isinstance(param_value, list) and param_value and is_estimator(param_value[0])
     )
+
+
+def _save_list_of_estimators(hdf_file, group, estimator_list, fitted):
+    hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_ESTIMATORS.name)
+    hdf_file.set_node_attr(group, "len", len(estimator_list))
+    for i, estimator in enumerate(estimator_list):
+        sub_group = hdf_file.create_group(group, f"item_{i}")
+        _save_estimator_to_group(hdf_file, sub_group, estimator, fitted)
 
 
 def _save_list_of_named_estimators(hdf_file, group, estimator_list, fitted):
@@ -169,4 +179,12 @@ def _load_estimator_from_group(group):
             )
         return list_of_names_estimators
 
-    raise NotImplementedError("unrecognized group type")
+    elif group_type == GroupType.LIST_OF_ESTIMATORS:
+        list_of_estimators = []
+        for i in range(user_attrs["len"]):
+            list_of_estimators.append(_load_estimator_from_group(group[f"item_{i}"]))
+        return list_of_estimators
+
+    raise NotImplementedError(
+        f"HDF group type {group_type.name} loading not implemented"
+    )

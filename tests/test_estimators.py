@@ -207,17 +207,14 @@ ESTIMATORS = [
         np.array([[0.0, 1.0, 2.0, 2.0], [1.0, 1.0, 0.0, 1.0]]),
         None,
     ),
-    pytest.param(
-        EstimatorSample(
-            ensemble.AdaBoostRegressor,
-            dict(random_state=0, n_estimators=100),
-            EstimatorKind.predict,
-            ["estimators_", "estimator_weights_", "estimator_errors_"],
-            *datasets.make_regression(
-                n_features=4, n_informative=2, random_state=0, shuffle=False
-            ),
+    EstimatorSample(
+        ensemble.AdaBoostRegressor,
+        dict(random_state=0, n_estimators=100),
+        EstimatorKind.predict,
+        ["estimators_", "estimator_weights_", "estimator_errors_"],
+        *datasets.make_regression(
+            n_features=4, n_informative=2, random_state=0, shuffle=False
         ),
-        marks=pytest.mark.xfail(reason="NotImplemented: list of estimators"),
     ),
     EstimatorSample(
         feature_selection.RFE,
