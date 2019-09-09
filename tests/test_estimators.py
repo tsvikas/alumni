@@ -11,6 +11,7 @@ from sklearn import feature_selection
 from sklearn import impute
 from sklearn import linear_model
 from sklearn import neighbors
+from sklearn import pipeline
 from sklearn import preprocessing
 from sklearn import svm
 
@@ -158,6 +159,37 @@ ESTIMATORS = [
         None,
         ["row_labels_", "column_labels_", "rows_", "columns_"],
         np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]]),
+        None,
+    ),
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                ("onehotencoder", preprocessing.OneHotEncoder(handle_unknown="ignore"))
+            ]
+        ),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
+    ),
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                (
+                    "pipeline",
+                    pipeline.make_pipeline(
+                        pipeline.make_pipeline(
+                            preprocessing.OneHotEncoder(handle_unknown="ignore")
+                        )
+                    ),
+                )
+            ]
+        ),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
         None,
     ),
 ]

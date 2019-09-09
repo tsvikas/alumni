@@ -43,7 +43,9 @@ def _save_estimator_to_group(hdf_file, group, estimator, fitted):
 
     # save params
     params_dict = get_params_dict(estimator)
-    _save_params_to_group(hdf_file, group, params_dict, fitted=False)  # TODO: check
+    # one would expect that those params are not fitted, and fitted can be set to Flase
+    # but some of them (for example pipeline.Pipeline.steps) do includes fitted estimators.
+    _save_params_to_group(hdf_file, group, params_dict, fitted=fitted)
 
     if fitted:
         # create fit group
@@ -120,7 +122,9 @@ def _load_estimator_from_group(group):
         module_version = user_attrs.pop("__module_version__")
         check_version(module_name, module_version)
 
-        # TODO: add subgroups to user_attrs
+        for name, subgroup in group._v_groups.items():
+            if name != FIT_GROUP:
+                user_attrs[name] = _load_estimator_from_group(subgroup)
 
         assert not [p for p in user_attrs if p.startswith("__")]
         mod = __import__(module_name, fromlist=[class_name])
@@ -133,7 +137,8 @@ def _load_estimator_from_group(group):
             assert (
                 GroupType[fit_user_attrs.pop("__type__")] == GroupType.FITTED_ATTRIBUTES
             )
-            # TODO: add subgroups to fit_user_attrs
+            for name, subgroup in fit_group._v_groups.items():
+                fit_user_attrs[name] = _load_estimator_from_group(subgroup)
 
             assert not [p for p in fit_user_attrs if p.startswith("__")]
             for k, v in fit_user_attrs.items():
@@ -149,7 +154,11 @@ def _load_estimator_from_group(group):
         raise ValueError("_load_estimator_from_group got a group with fitting data")
 
     elif group_type == GroupType.LIST_OF_NAMED_ESTIMATORS:
-        # TODO: code here
-        raise NotImplementedError("list of tuples")
+        list_of_names_estimators = []
+        for name, rest in zip(user_attrs["names"], user_attrs["rests"]):
+            list_of_names_estimators.append(
+                (name, _load_estimator_from_group(group[name]), *rest)
+            )
+        return list_of_names_estimators
 
     raise NotImplementedError("unrecognized group type")
