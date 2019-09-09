@@ -7,6 +7,7 @@ from sklearn import cluster
 from sklearn import compose
 from sklearn import datasets
 from sklearn import decomposition
+from sklearn import ensemble
 from sklearn import feature_extraction
 from sklearn import feature_selection
 from sklearn import impute
@@ -205,6 +206,18 @@ ESTIMATORS = [
         ["sparse_output_", "transformers_", "_columns", "_remainder", "_n_features"],
         np.array([[0.0, 1.0, 2.0, 2.0], [1.0, 1.0, 0.0, 1.0]]),
         None,
+    ),
+    pytest.param(
+        EstimatorSample(
+            ensemble.AdaBoostRegressor,
+            dict(random_state=0, n_estimators=100),
+            EstimatorKind.predict,
+            ["estimators_", "estimator_weights_", "estimator_errors_"],
+            *datasets.make_regression(
+                n_features=4, n_informative=2, random_state=0, shuffle=False
+            ),
+        ),
+        marks=pytest.mark.xfail(reason="NotImplemented: list of estimators"),
     ),
 ]
 
