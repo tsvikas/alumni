@@ -1,6 +1,6 @@
 import enum
 from pathlib import Path
-from typing import Tuple, Any, List
+from typing import Optional, Tuple, Any, List
 
 import tables
 from sklearn.base import BaseEstimator
@@ -26,7 +26,11 @@ class GroupType(enum.Enum):
 
 
 def save_estimator(
-    filename: Path, estimator: BaseEstimator, *, validation=None, fitted: bool = True
+    filename: Path,
+    estimator: BaseEstimator,
+    *,
+    validation: Optional[Tuple[str, Any]] = None,
+    fitted=True,
 ):
     if Path(filename).exists():
         raise ValueError(f"file {filename} exists")
@@ -47,7 +51,11 @@ def save_estimator(
 
 
 def _save_validation_to_group(
-    hdf_file, group, estimator, validation_func, validation_data
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator: BaseEstimator,
+    validation_func: str,
+    validation_data: Any,
 ):
     hdf_file.set_node_attr(group, "validation_func", validation_func)
     hdf_file.set_node_attr(group, "X", validation_data)
