@@ -58,13 +58,17 @@ def _save_validation_to_group(
     validation_data: Any,
 ):
     hdf_file.set_node_attr(group, "validation_func", validation_func)
-    hdf_file.create_array(
-        group, "X", utils.convert_to_array_compatible(validation_data), "input"
-    )
+    _save_array_to_group(hdf_file, group, "X", "input", validation_data)
     y = getattr(estimator, validation_func)(validation_data)
-    hdf_file.create_array(
-        group, "y", utils.convert_to_array_compatible(y), "expected_output"
-    )
+    _save_array_to_group(hdf_file, group, "y", "expected_output", y)
+
+
+def _save_array_to_group(
+    hdf_file: tables.File, group: tables.Group, name: str, title: str, data: Any
+):
+    data = utils.convert_to_array_compatible(data)
+    hdf_file.create_array(group, name, data, title)
+    utils.assert_equal(group[name].read(), data)
 
 
 def _save_estimator_to_group(
