@@ -183,7 +183,7 @@ def load_estimator(filename: Path):
 
 def _load_validation_from_group(group: tables.Group):
     user_attrs = _get_user_attrs(group)
-    return user_attrs["validation_func"], group["X"], group["y"]
+    return user_attrs["validation_func"], group["X"].read(), group["y"].read()
 
 
 def check_version(module_name: str, module_version: str):
