@@ -29,7 +29,7 @@ def save_estimator(
     filename: Path,
     estimator: BaseEstimator,
     *,
-    validation: Optional[Tuple[str, Any]] = None,
+    validation: Optional[Tuple[str, Any, bool]] = None,
     fitted=True,
 ):
     if Path(filename).exists():
@@ -43,10 +43,15 @@ def save_estimator(
         _save_estimator_to_group(hdf_file, group, estimator, fitted=fitted)
         # save validation data
         if validation is not None:
-            validation_func, validation_X = validation
+            validation_func, validation_X, is_validation_array = validation
             group = hdf_file.create_group("/", VALIDATION_GROUP)
             _save_validation_to_group(
-                hdf_file, group, estimator, validation_func, validation_X
+                hdf_file,
+                group,
+                estimator,
+                validation_func,
+                validation_X,
+                is_validation_array,
             )
 
 
@@ -56,11 +61,18 @@ def _save_validation_to_group(
     estimator: BaseEstimator,
     validation_func: str,
     validation_data: Any,
+    is_validation_array: bool,
 ):
     hdf_file.set_node_attr(group, "validation_func", validation_func)
-    _save_array_to_group(hdf_file, group, "X", "input", validation_data)
-    y = getattr(estimator, validation_func)(validation_data)
-    _save_array_to_group(hdf_file, group, "y", "expected_output", y)
+    if is_validation_array:
+        # this mode handle well large inputs, but might cast the array, and don't work with mixed type arrays
+        _save_array_to_group(hdf_file, group, "X", "input", validation_data)
+        y = getattr(estimator, validation_func)(group["X"])
+        _save_array_to_group(hdf_file, group, "y", "expected_output", y)
+    else:
+        hdf_file.set_node_attr(group, "X", validation_data)
+        y = getattr(estimator, validation_func)(validation_data)
+        hdf_file.set_node_attr(group, "y", y)
 
 
 def _save_array_to_group(
@@ -187,7 +199,10 @@ def load_estimator(filename: Path):
 
 def _load_validation_from_group(group: tables.Group):
     user_attrs = _get_user_attrs(group)
-    return user_attrs["validation_func"], group["X"].read(), group["y"].read()
+    if "X" in group:
+        return user_attrs["validation_func"], group["X"].read(), group["y"].read()
+    else:
+        return user_attrs["validation_func"], user_attrs["X"], user_attrs["y"]
 
 
 def check_version(module_name: str, module_version: str):

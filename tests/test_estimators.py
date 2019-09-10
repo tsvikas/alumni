@@ -46,16 +46,13 @@ class EstimatorSample(NamedTuple):
 
 
 ESTIMATORS = [
-    pytest.param(
-        EstimatorSample(
-            preprocessing.OneHotEncoder,
-            dict(handle_unknown="ignore"),
-            EstimatorKind.transform,
-            ["categories_", "drop_idx_"],
-            [["Male", 1], ["Female", 3], ["Female", 2]],
-            None,
-        ),
-        marks=pytest.mark.xfail(reason="FIXME! from fixing example11"),
+    EstimatorSample(
+        preprocessing.OneHotEncoder,
+        dict(handle_unknown="ignore"),
+        EstimatorKind.transform,
+        ["categories_", "drop_idx_"],
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
     ),
     EstimatorSample(
         preprocessing.PolynomialFeatures,
@@ -151,23 +148,18 @@ ESTIMATORS = [
         ["scores_", "pvalues_"],
         *datasets.load_digits(return_X_y=True),
     ),
-    pytest.param(
-        EstimatorSample(
-            feature_extraction.text.HashingVectorizer,
-            dict(n_features=2 ** 4),
-            EstimatorKind.transform,
-            [],  # no params are fitted
-            [
-                "This is the first document.",
-                "This document is the second document.",
-                "And this is the third one.",
-                "Is this the first document?",
-            ],
-            None,
-        ),
-        marks=pytest.mark.xfail(
-            reason="FIXME! from adding check when saving validation"
-        ),
+    EstimatorSample(
+        feature_extraction.text.HashingVectorizer,
+        dict(n_features=2 ** 4),
+        EstimatorKind.transform,
+        [],  # no params are fitted
+        [
+            "This is the first document.",
+            "This document is the second document.",
+            "And this is the third one.",
+            "Is this the first document?",
+        ],
+        None,
     ),
     pytest.param(
         EstimatorSample(
@@ -180,45 +172,36 @@ ESTIMATORS = [
         ),
         marks=pytest.mark.xfail(reason="FIXME!"),
     ),
-    pytest.param(
-        EstimatorSample(
-            pipeline.Pipeline,
-            lambda: dict(
-                steps=[
-                    (
-                        "onehotencoder",
-                        preprocessing.OneHotEncoder(handle_unknown="ignore"),
-                    )
-                ]
-            ),
-            EstimatorKind.transform,
-            [],  # all fitted params are deep
-            [["Male", 1], ["Female", 3], ["Female", 2]],
-            None,
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                ("onehotencoder", preprocessing.OneHotEncoder(handle_unknown="ignore"))
+            ]
         ),
-        marks=pytest.mark.xfail(reason="FIXME! from fixing example11"),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
     ),
-    pytest.param(
-        EstimatorSample(
-            pipeline.Pipeline,
-            lambda: dict(
-                steps=[
-                    (
-                        "pipeline",
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                (
+                    "pipeline",
+                    pipeline.make_pipeline(
                         pipeline.make_pipeline(
-                            pipeline.make_pipeline(
-                                preprocessing.OneHotEncoder(handle_unknown="ignore")
-                            )
-                        ),
-                    )
-                ]
-            ),
-            EstimatorKind.transform,
-            [],  # all fitted params are deep
-            [["Male", 1], ["Female", 3], ["Female", 2]],
-            None,
+                            preprocessing.OneHotEncoder(handle_unknown="ignore")
+                        )
+                    ),
+                )
+            ]
         ),
-        marks=pytest.mark.xfail(reason="FIXME! from fixing example11"),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
     ),
     EstimatorSample(
         compose.ColumnTransformer,

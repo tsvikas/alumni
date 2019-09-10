@@ -68,7 +68,11 @@ def test_load(tmp_path: Path, estimator_sample: EstimatorSample):
         fn,
         estimator,
         fitted=True,
-        validation=(estimator_sample.kind, estimator_sample.X),
+        validation=(
+            estimator_sample.kind,
+            estimator_sample.X,
+            len(estimator_sample.X) > 100,
+        ),
     )
 
     # load estimator
