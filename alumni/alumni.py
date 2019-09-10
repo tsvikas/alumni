@@ -175,7 +175,7 @@ def load_estimator(filename: Path):
                 group
             )
             utils.assert_equal(
-                validation_y,
+                utils.convert_to_array_compatible(validation_y),
                 utils.convert_to_array_compatible(
                     getattr(estimator, validation_func)(
                         utils.convert_to_array_compatible(validation_X)
