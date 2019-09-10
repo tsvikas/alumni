@@ -161,16 +161,13 @@ ESTIMATORS = [
         ],
         None,
     ),
-    pytest.param(
-        EstimatorSample(
-            cluster.SpectralBiclustering,
-            dict(n_clusters=2, random_state=0),
-            None,
-            ["row_labels_", "column_labels_", "rows_", "columns_"],
-            np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]]),
-            None,
-        ),
-        marks=pytest.mark.xfail(reason="FIXME!"),
+    EstimatorSample(
+        cluster.SpectralBiclustering,
+        dict(n_clusters=2, random_state=0),
+        None,
+        ["row_labels_", "column_labels_", "rows_", "columns_"],
+        np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]]),
+        None,
     ),
     EstimatorSample(
         pipeline.Pipeline,

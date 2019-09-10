@@ -44,6 +44,13 @@ def save_estimator(
         # save validation data
         if validation is not None:
             validation_func, validation_X, is_validation_array = validation
+            if validation_func is None:
+                raise ValueError("validation_func is None")
+            if not (
+                hasattr(estimator, validation_func)
+                and callable(getattr(estimator, validation_func))
+            ):
+                raise ValueError(f"Cannot validate {estimator} with {validation_func}")
             group = hdf_file.create_group("/", VALIDATION_GROUP)
             _save_validation_to_group(
                 hdf_file,
