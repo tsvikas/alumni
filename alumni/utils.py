@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import scipy.sparse.csr
 import sklearn.base
 import sklearn.tree.tree
 
@@ -46,11 +47,8 @@ def assert_equal(
         }
         assert_equal(actual_tree, desired_tree, err_msg, verbose)
         return
-    # scipy.sparse.csr.csr_matrix doesn't define an __eq__ function, convert to np.array
-    if (
-        type(desired).__module__ == "scipy.sparse.csr"
-        and type(desired).__name__ == "csr_matrix"
-    ):
+    # csr_matrix doesn't define an __eq__ function, convert to np.array
+    if isinstance(desired, scipy.sparse.csr.csr_matrix):
         if not type(actual) == type(desired):
             raise AssertionError(repr(type(actual)))
         assert_equal(actual.toarray(), desired.toarray(), err_msg, verbose)
