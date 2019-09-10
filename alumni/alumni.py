@@ -193,14 +193,11 @@ def load_estimator(filename: Path):
             validation_func, validation_X, validation_y = _load_validation_from_group(
                 group
             )
-            utils.assert_equal(
-                utils.convert_to_array_compatible(validation_y),
-                utils.convert_to_array_compatible(
-                    getattr(estimator, validation_func)(
-                        utils.convert_to_array_compatible(validation_X)
-                    )
-                ),
-            )
+            validation_X = utils.convert_to_array_compatible(validation_X)
+            validation_y = utils.convert_to_array_compatible(validation_y)
+            new_y = getattr(estimator, validation_func)(validation_X)
+            new_y = utils.convert_to_array_compatible(new_y)
+            utils.assert_equal(validation_y, new_y)
         return estimator
 
 
