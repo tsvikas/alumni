@@ -54,3 +54,9 @@ def assert_equal(
         assert_equal(actual.toarray(), desired.toarray(), err_msg, verbose)
         return
     np.testing.assert_equal(actual, desired, err_msg, verbose)
+
+
+def convert_to_array_compatible(data):
+    if isinstance(data, scipy.sparse.csr.csr_matrix):
+        return data.toarray()
+    return data

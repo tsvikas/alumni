@@ -58,9 +58,12 @@ def _save_validation_to_group(
     validation_data: Any,
 ):
     hdf_file.set_node_attr(group, "validation_func", validation_func)
-    hdf_file.set_node_attr(group, "X", validation_data)
-    hdf_file.set_node_attr(
-        group, "y", getattr(estimator, validation_func)(validation_data)
+    hdf_file.create_array(
+        group, "X", utils.convert_to_array_compatible(validation_data), "input"
+    )
+    y = getattr(estimator, validation_func)(validation_data)
+    hdf_file.create_array(
+        group, "y", utils.convert_to_array_compatible(y), "expected_output"
     )
 
 
@@ -168,14 +171,19 @@ def load_estimator(filename: Path):
                 group
             )
             utils.assert_equal(
-                validation_y, getattr(estimator, validation_func)(validation_X)
+                validation_y,
+                utils.convert_to_array_compatible(
+                    getattr(estimator, validation_func)(
+                        utils.convert_to_array_compatible(validation_X)
+                    )
+                ),
             )
         return estimator
 
 
 def _load_validation_from_group(group: tables.Group):
     user_attrs = _get_user_attrs(group)
-    return user_attrs["validation_func"], user_attrs["X"], user_attrs["y"]
+    return user_attrs["validation_func"], group["X"], group["y"]
 
 
 def check_version(module_name: str, module_version: str):
