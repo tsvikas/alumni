@@ -234,7 +234,7 @@ ESTIMATORS = [
 ]
 
 
-def get_estimator(estimator_sample):
+def get_estimator(estimator_sample: EstimatorSample):
     if callable(estimator_sample.estimator_init_kwargs):
         init_kwargs = estimator_sample.estimator_init_kwargs()
     else:
@@ -245,7 +245,7 @@ def get_estimator(estimator_sample):
 
 
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
-def test_fit_param_names(estimator_sample):
+def test_fit_param_names(estimator_sample: EstimatorSample):
     estimator = get_estimator(estimator_sample)
     # check type
     if estimator_sample.estimator_kind is not None:

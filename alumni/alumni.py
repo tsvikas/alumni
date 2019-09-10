@@ -21,7 +21,7 @@ class GroupType(enum.Enum):
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
-def save_estimator(filename, estimator, fitted=True):
+def save_estimator(filename: Path, estimator, fitted: bool = True):
     if Path(filename).exists():
         raise ValueError(f"file {filename} exists")
     with tables.File(str(filename), mode="w", title=HDF_TITLE) as hdf_file:
@@ -34,7 +34,9 @@ def save_estimator(filename, estimator, fitted=True):
         # TODO: save train / test / validation data
 
 
-def _save_estimator_to_group(hdf_file, group, estimator, fitted):
+def _save_estimator_to_group(
+    hdf_file: tables.File, group: tables.Group, estimator, fitted: bool
+):
     # save estimator metadata
     class_name = estimator.__class__.__module__ + "." + estimator.__class__.__name__
     module_version = getattr(__import__(estimator.__class__.__module__), "__version__")
@@ -57,7 +59,9 @@ def _save_estimator_to_group(hdf_file, group, estimator, fitted):
         _save_params_to_group(hdf_file, fit_group, fit_params_dict, fitted)
 
 
-def _save_params_to_group(hdf_file, group, params_dict, fitted):
+def _save_params_to_group(
+    hdf_file: tables.File, group: tables.Group, params_dict: dict, fitted: bool
+):
     for param_name, param_value in params_dict.items():
         if is_estimator(param_value):
             param_group = hdf_file.create_group(group, param_name)
@@ -92,7 +96,9 @@ def is_list_of_estimators(param_value):
     )
 
 
-def _save_list_of_estimators(hdf_file, group, estimator_list, fitted):
+def _save_list_of_estimators(
+    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "len", len(estimator_list))
     for i, estimator in enumerate(estimator_list):
@@ -100,7 +106,9 @@ def _save_list_of_estimators(hdf_file, group, estimator_list, fitted):
         _save_estimator_to_group(hdf_file, sub_group, estimator, fitted)
 
 
-def _save_list_of_named_estimators(hdf_file, group, estimator_list, fitted):
+def _save_list_of_named_estimators(
+    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_NAMED_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "names", [n for (n, e, *r) in estimator_list])
     hdf_file.set_node_attr(group, "rests", [r for (n, e, *r) in estimator_list])
@@ -109,7 +117,7 @@ def _save_list_of_named_estimators(hdf_file, group, estimator_list, fitted):
         _save_estimator_to_group(hdf_file, sub_group, estimator, fitted)
 
 
-def load_estimator(filename):
+def load_estimator(filename: Path):
     with tables.File(str(filename), mode="r") as hdf_file:
         # check metadata
         assert hdf_file.get_node_attr("/", "protocol_name") == PROTOCOL_NAME
@@ -125,13 +133,13 @@ def check_version(module_name, module_version):
 
 
 # noinspection PyProtectedMember
-def _get_user_attrs(group):
+def _get_user_attrs(group: tables.Group):
     attrs = group._v_attrs
     user_attrs = {k: attrs[k] for k in attrs._f_list("user")}
     return user_attrs
 
 
-def _load_estimator_from_group(group):
+def _load_estimator_from_group(group: tables.Group):
     user_attrs = _get_user_attrs(group)
 
     group_type = GroupType[user_attrs.pop("__type__")]

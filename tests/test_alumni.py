@@ -1,4 +1,5 @@
-from typing import Optional, Any
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -6,7 +7,7 @@ import sklearn.base
 import tables
 
 from alumni import __version__, alumni
-from tests.test_estimators import ESTIMATORS, get_estimator
+from tests.test_estimators import ESTIMATORS, get_estimator, EstimatorSample
 
 
 def test_version():
@@ -14,7 +15,7 @@ def test_version():
 
 
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
-def test_save(tmp_path, estimator_sample):
+def test_save(tmp_path: Path, estimator_sample: EstimatorSample):
     # create estimator & save to hdf
     estimator = get_estimator(estimator_sample)
     fn = tmp_path / "est.hdf5"
@@ -48,7 +49,7 @@ def test_save(tmp_path, estimator_sample):
             assert_param_saved(orig_param, attr_name, fit_group)
 
 
-def assert_param_saved(param, param_name, group):
+def assert_param_saved(param, param_name: str, group: tables.Group):
     if (
         alumni.is_list_of_named_estimators(param)
         or alumni.is_list_of_estimators(param)
@@ -61,7 +62,7 @@ def assert_param_saved(param, param_name, group):
 
 
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
-def test_load(tmp_path, estimator_sample):
+def test_load(tmp_path: Path, estimator_sample: EstimatorSample):
     # create estimator & save to hdf
     estimator = get_estimator(estimator_sample)
     fn = tmp_path / "est.hdf5"
@@ -84,10 +85,7 @@ def test_load(tmp_path, estimator_sample):
 
 
 def assert_equal(
-    actual: Any,
-    desired: Any,
-    err_msg: Optional[str] = "",
-    verbose: Optional[bool] = True,
+    actual: Any, desired: Any, err_msg: str = "", verbose: bool = True
 ) -> None:
     # recursively call itself when needed (copied from np.testing.assert_equal)
     __tracebackhide__ = True  # Hide traceback for py.test
