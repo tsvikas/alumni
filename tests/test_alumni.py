@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable
+from typing import Optional, Any
 
 import numpy as np
 import pytest
@@ -67,18 +67,25 @@ def test_load(tmp_path, estimator_sample):
     fn = tmp_path / "est.hdf5"
     alumni.save_estimator(fn, estimator, fitted=True)
 
-    # load estimator and check it
+    # load estimator
     fit_attr_names = estimator_sample.fit_param_names
     attr_names = list(estimator.get_params(deep=False))
     loaded_est = alumni.load_estimator(fn)
+    # check estimator params
     assert type(loaded_est) == type(estimator)
     for attr_name in attr_names + fit_attr_names:
         assert_equal(getattr(loaded_est, attr_name), getattr(estimator, attr_name))
+    # check estimator func
+    if estimator_sample.kind is not None:
+        assert_equal(
+            getattr(loaded_est, estimator_sample.kind)(estimator_sample.X),
+            getattr(estimator, estimator_sample.kind)(estimator_sample.X),
+        )
 
 
 def assert_equal(
-    actual: Union[np.ndarray, Iterable, int, float],
-    desired: Union[np.ndarray, Iterable, int, float],
+    actual: Any,
+    desired: Any,
     err_msg: Optional[str] = "",
     verbose: Optional[bool] = True,
 ) -> None:
@@ -119,5 +126,13 @@ def assert_equal(
             if not callable(getattr(desired, k))
         }
         assert_equal(actual_tree, desired_tree, err_msg, verbose)
+        return
+    if (
+        type(desired).__module__ == "scipy.sparse.csr"
+        and type(desired).__name__ == "csr_matrix"
+    ):
+        if not type(actual) == type(desired):
+            raise AssertionError(repr(type(actual)))
+        assert_equal(actual.toarray(), desired.toarray(), err_msg, verbose)
         return
     np.testing.assert_equal(actual, desired, err_msg, verbose)
