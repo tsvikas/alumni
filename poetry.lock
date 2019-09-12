@@ -65,7 +65,7 @@ version = "0.21"
 zipp = ">=0.5"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Lightweight pipelining: using Python functions as pipeline jobs."
 name = "joblib"
 optional = false
@@ -235,7 +235,7 @@ python-versions = "*"
 version = "1.9.0"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "A set of python modules for machine learning and data mining"
 name = "scikit-learn"
 optional = false
@@ -248,7 +248,7 @@ numpy = ">=1.11.0"
 scipy = ">=0.17.0"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "SciPy: Scientific Library for Python"
 name = "scipy"
 optional = false
@@ -331,7 +331,7 @@ version = "0.6.0"
 more-itertools = "*"
 
 [metadata]
-content-hash = "d292e021bb6ce35ea8efbdbb57f5b935ccccc1902cbb275516fa565e0892eea9"
+content-hash = "071a76f3bc496e606dd29c6c3cbc1ef4f9dfb91af49a9bfb9e1030f0e0cdec62"
 python-versions = "^3.7"
 
 [metadata.hashes]
