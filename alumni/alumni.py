@@ -1,7 +1,9 @@
 import enum
 from pathlib import Path
+from typing import Tuple, Any, List
 
 import tables
+from sklearn.base import BaseEstimator
 
 from alumni.estimators import get_params_dict, get_fit_params_dict
 
@@ -21,7 +23,7 @@ class GroupType(enum.Enum):
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
-def save_estimator(filename: Path, estimator, fitted: bool = True):
+def save_estimator(filename: Path, estimator: BaseEstimator, fitted: bool = True):
     if Path(filename).exists():
         raise ValueError(f"file {filename} exists")
     with tables.File(str(filename), mode="w", title=HDF_TITLE) as hdf_file:
@@ -35,7 +37,7 @@ def save_estimator(filename: Path, estimator, fitted: bool = True):
 
 
 def _save_estimator_to_group(
-    hdf_file: tables.File, group: tables.Group, estimator, fitted: bool
+    hdf_file: tables.File, group: tables.Group, estimator: BaseEstimator, fitted: bool
 ):
     # save estimator metadata
     class_name = estimator.__class__.__module__ + "." + estimator.__class__.__name__
@@ -97,7 +99,10 @@ def is_list_of_estimators(param_value):
 
 
 def _save_list_of_estimators(
-    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator_list: List[BaseEstimator],
+    fitted: bool,
 ):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "len", len(estimator_list))
@@ -107,7 +112,10 @@ def _save_list_of_estimators(
 
 
 def _save_list_of_named_estimators(
-    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator_list: List[Tuple[str, BaseEstimator, Any]],
+    fitted: bool,
 ):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_NAMED_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "names", [n for (n, e, *r) in estimator_list])
@@ -128,7 +136,7 @@ def load_estimator(filename: Path):
         return estimator
 
 
-def check_version(module_name, module_version):
+def check_version(module_name: str, module_version: str):
     assert module_version == getattr(__import__(module_name), "__version__")
 
 
