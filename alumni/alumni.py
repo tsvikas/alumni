@@ -5,6 +5,7 @@ from typing import Tuple, Any, List
 import tables
 from sklearn.base import BaseEstimator
 
+from alumni import utils
 from alumni.estimators import get_params_dict, get_fit_params_dict
 
 PROTOCOL_NAME = "sklearn-hdf5"
@@ -13,6 +14,7 @@ PROTOCOL_VERSION = "0.1"
 HDF_TITLE = "alumni, a python package to save complex scikit-learn estimators"
 ESTIMATOR_GROUP = "_estimator"
 FIT_GROUP = "_fit"
+VALIDATION_GROUP = "_validation"
 
 
 class GroupType(enum.Enum):
@@ -23,7 +25,9 @@ class GroupType(enum.Enum):
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
-def save_estimator(filename: Path, estimator: BaseEstimator, fitted: bool = True):
+def save_estimator(
+    filename: Path, estimator: BaseEstimator, *, validation=None, fitted: bool = True
+):
     if Path(filename).exists():
         raise ValueError(f"file {filename} exists")
     with tables.File(str(filename), mode="w", title=HDF_TITLE) as hdf_file:
@@ -33,7 +37,23 @@ def save_estimator(filename: Path, estimator: BaseEstimator, fitted: bool = True
         # save estimator
         group = hdf_file.create_group("/", ESTIMATOR_GROUP)
         _save_estimator_to_group(hdf_file, group, estimator, fitted=fitted)
-        # TODO: save train / test / validation data
+        # save validation data
+        if validation is not None:
+            validation_func, validation_X = validation
+            group = hdf_file.create_group("/", VALIDATION_GROUP)
+            _save_validation_to_group(
+                hdf_file, group, estimator, validation_func, validation_X
+            )
+
+
+def _save_validation_to_group(
+    hdf_file, group, estimator, validation_func, validation_data
+):
+    hdf_file.set_node_attr(group, "validation_func", validation_func)
+    hdf_file.set_node_attr(group, "X", validation_data)
+    hdf_file.set_node_attr(
+        group, "y", getattr(estimator, validation_func)(validation_data)
+    )
 
 
 def _save_estimator_to_group(
@@ -133,7 +153,21 @@ def load_estimator(filename: Path):
         # load estimator
         group = hdf_file.get_node("/")[ESTIMATOR_GROUP]
         estimator = _load_estimator_from_group(group)
+        # load validation
+        if VALIDATION_GROUP in hdf_file.root:
+            group = hdf_file.get_node("/")[VALIDATION_GROUP]
+            validation_func, validation_X, validation_y = _load_validation_from_group(
+                group
+            )
+            utils.assert_equal(
+                validation_y, getattr(estimator, validation_func)(validation_X)
+            )
         return estimator
+
+
+def _load_validation_from_group(group: tables.Group):
+    user_attrs = _get_user_attrs(group)
+    return user_attrs["validation_func"], user_attrs["X"], user_attrs["y"]
 
 
 def check_version(module_name: str, module_version: str):

@@ -64,7 +64,12 @@ def test_load(tmp_path: Path, estimator_sample: EstimatorSample):
     # create estimator & save to hdf
     estimator = get_estimator(estimator_sample)
     fn = tmp_path / "est.hdf5"
-    alumni.save_estimator(fn, estimator, fitted=True)
+    alumni.save_estimator(
+        fn,
+        estimator,
+        fitted=True,
+        validation=(estimator_sample.kind, estimator_sample.X),
+    )
 
     # load estimator
     fit_attr_names = estimator_sample.fit_param_names
