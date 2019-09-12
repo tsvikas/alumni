@@ -1,8 +1,11 @@
 import enum
 from pathlib import Path
+from typing import Optional, Tuple, Any, List
 
 import tables
+from sklearn.base import BaseEstimator
 
+from alumni import utils
 from alumni.estimators import get_params_dict, get_fit_params_dict
 
 PROTOCOL_NAME = "sklearn-hdf5"
@@ -11,6 +14,7 @@ PROTOCOL_VERSION = "0.1"
 HDF_TITLE = "alumni, a python package to save complex scikit-learn estimators"
 ESTIMATOR_GROUP = "_estimator"
 FIT_GROUP = "_fit"
+VALIDATION_GROUP = "_validation"
 
 
 class GroupType(enum.Enum):
@@ -21,7 +25,13 @@ class GroupType(enum.Enum):
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
-def save_estimator(filename: Path, estimator, fitted: bool = True):
+def save_estimator(
+    filename: Path,
+    estimator: BaseEstimator,
+    *,
+    validation: Optional[Tuple[str, Any, bool]] = None,
+    fitted=True,
+):
     if Path(filename).exists():
         raise ValueError(f"file {filename} exists")
     with tables.File(str(filename), mode="w", title=HDF_TITLE) as hdf_file:
@@ -31,11 +41,57 @@ def save_estimator(filename: Path, estimator, fitted: bool = True):
         # save estimator
         group = hdf_file.create_group("/", ESTIMATOR_GROUP)
         _save_estimator_to_group(hdf_file, group, estimator, fitted=fitted)
-        # TODO: save train / test / validation data
+        # save validation data
+        if validation is not None:
+            validation_func, validation_X, is_validation_array = validation
+            if validation_func is None:
+                raise ValueError("validation_func is None")
+            if not (
+                hasattr(estimator, validation_func)
+                and callable(getattr(estimator, validation_func))
+            ):
+                raise ValueError(f"Cannot validate {estimator} with {validation_func}")
+            group = hdf_file.create_group("/", VALIDATION_GROUP)
+            _save_validation_to_group(
+                hdf_file,
+                group,
+                estimator,
+                validation_func,
+                validation_X,
+                is_validation_array,
+            )
+
+
+def _save_validation_to_group(
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator: BaseEstimator,
+    validation_func: str,
+    validation_data: Any,
+    is_validation_array: bool,
+):
+    hdf_file.set_node_attr(group, "validation_func", validation_func)
+    if is_validation_array:
+        # this mode handle well large inputs, but might cast the array, and don't work with mixed type arrays
+        _save_array_to_group(hdf_file, group, "X", "input", validation_data)
+        y = getattr(estimator, validation_func)(group["X"])
+        _save_array_to_group(hdf_file, group, "y", "expected_output", y)
+    else:
+        hdf_file.set_node_attr(group, "X", validation_data)
+        y = getattr(estimator, validation_func)(validation_data)
+        hdf_file.set_node_attr(group, "y", y)
+
+
+def _save_array_to_group(
+    hdf_file: tables.File, group: tables.Group, name: str, title: str, data: Any
+):
+    data = utils.convert_to_array_compatible(data)
+    hdf_file.create_array(group, name, data, title)
+    utils.assert_equal(group[name].read(), data)
 
 
 def _save_estimator_to_group(
-    hdf_file: tables.File, group: tables.Group, estimator, fitted: bool
+    hdf_file: tables.File, group: tables.Group, estimator: BaseEstimator, fitted: bool
 ):
     # save estimator metadata
     class_name = estimator.__class__.__module__ + "." + estimator.__class__.__name__
@@ -97,7 +153,10 @@ def is_list_of_estimators(param_value):
 
 
 def _save_list_of_estimators(
-    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator_list: List[BaseEstimator],
+    fitted: bool,
 ):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "len", len(estimator_list))
@@ -107,7 +166,10 @@ def _save_list_of_estimators(
 
 
 def _save_list_of_named_estimators(
-    hdf_file: tables.File, group: tables.Group, estimator_list, fitted: bool
+    hdf_file: tables.File,
+    group: tables.Group,
+    estimator_list: List[Tuple[str, BaseEstimator, Any]],
+    fitted: bool,
 ):
     hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_NAMED_ESTIMATORS.name)
     hdf_file.set_node_attr(group, "names", [n for (n, e, *r) in estimator_list])
@@ -125,10 +187,29 @@ def load_estimator(filename: Path):
         # load estimator
         group = hdf_file.get_node("/")[ESTIMATOR_GROUP]
         estimator = _load_estimator_from_group(group)
+        # load validation
+        if VALIDATION_GROUP in hdf_file.root:
+            group = hdf_file.get_node("/")[VALIDATION_GROUP]
+            validation_func, validation_X, validation_y = _load_validation_from_group(
+                group
+            )
+            validation_X = utils.convert_to_array_compatible(validation_X)
+            validation_y = utils.convert_to_array_compatible(validation_y)
+            new_y = getattr(estimator, validation_func)(validation_X)
+            new_y = utils.convert_to_array_compatible(new_y)
+            utils.assert_equal(validation_y, new_y)
         return estimator
 
 
-def check_version(module_name, module_version):
+def _load_validation_from_group(group: tables.Group):
+    user_attrs = _get_user_attrs(group)
+    if "X" in group:
+        return user_attrs["validation_func"], group["X"].read(), group["y"].read()
+    else:
+        return user_attrs["validation_func"], user_attrs["X"], user_attrs["y"]
+
+
+def check_version(module_name: str, module_version: str):
     assert module_version == getattr(__import__(module_name), "__version__")
 
 
