@@ -6,4 +6,3 @@
 * better API: validation shouldn't be a tuple, but 
   (validate_data=None, validate_kind='auto') and is_array should be automatic.
 * add testing of all sk-learn estimators
-* switch to https://recursive-diff.readthedocs.io ?

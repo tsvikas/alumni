@@ -10,6 +10,7 @@ def assert_equal(
     actual: Any, desired: Any, err_msg: str = "", verbose: bool = True
 ) -> None:
     # recursively call itself when needed (copied from np.testing.assert_equal)
+    # note: tried https://recursive-diff.readthedocs.io as a replacement
     __tracebackhide__ = True  # Hide traceback for py.test
     if isinstance(desired, dict):
         if not isinstance(actual, dict):
