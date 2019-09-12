@@ -17,6 +17,7 @@ class GroupType(enum.Enum):
     ESTIMATOR = 1
     FITTED_ATTRIBUTES = 2
     LIST_OF_NAMED_ESTIMATORS = 3
+    LIST_OF_ESTIMATORS = 4
     # TODO: KERAS_REGRESSOR/CLASSIFIER/HISTORY
 
 
@@ -43,7 +44,9 @@ def _save_estimator_to_group(hdf_file, group, estimator, fitted):
 
     # save params
     params_dict = get_params_dict(estimator)
-    _save_params_to_group(hdf_file, group, params_dict, fitted=False)  # TODO: check
+    # one would expect that those params are not fitted, and fitted can be set to Flase
+    # but some of them (for example pipeline.Pipeline.steps) do includes fitted estimators.
+    _save_params_to_group(hdf_file, group, params_dict, fitted=fitted)
 
     if fitted:
         # create fit group
@@ -62,6 +65,9 @@ def _save_params_to_group(hdf_file, group, params_dict, fitted):
         elif is_list_of_named_estimators(param_value):
             param_group = hdf_file.create_group(group, param_name)
             _save_list_of_named_estimators(hdf_file, param_group, param_value, fitted)
+        elif is_list_of_estimators(param_value):
+            param_group = hdf_file.create_group(group, param_name)
+            _save_list_of_estimators(hdf_file, param_group, param_value, fitted)
         else:
             hdf_file.set_node_attr(group, param_name, param_value)
 
@@ -78,6 +84,20 @@ def is_list_of_named_estimators(param_value):
         and len(param_value[0]) >= 2
         and is_estimator(param_value[0][1])
     )
+
+
+def is_list_of_estimators(param_value):
+    return (
+        isinstance(param_value, list) and param_value and is_estimator(param_value[0])
+    )
+
+
+def _save_list_of_estimators(hdf_file, group, estimator_list, fitted):
+    hdf_file.set_node_attr(group, "__type__", GroupType.LIST_OF_ESTIMATORS.name)
+    hdf_file.set_node_attr(group, "len", len(estimator_list))
+    for i, estimator in enumerate(estimator_list):
+        sub_group = hdf_file.create_group(group, f"item_{i}")
+        _save_estimator_to_group(hdf_file, sub_group, estimator, fitted)
 
 
 def _save_list_of_named_estimators(hdf_file, group, estimator_list, fitted):
@@ -120,7 +140,9 @@ def _load_estimator_from_group(group):
         module_version = user_attrs.pop("__module_version__")
         check_version(module_name, module_version)
 
-        # TODO: add subgroups to user_attrs
+        for name, subgroup in group._v_groups.items():
+            if name != FIT_GROUP:
+                user_attrs[name] = _load_estimator_from_group(subgroup)
 
         assert not [p for p in user_attrs if p.startswith("__")]
         mod = __import__(module_name, fromlist=[class_name])
@@ -133,7 +155,8 @@ def _load_estimator_from_group(group):
             assert (
                 GroupType[fit_user_attrs.pop("__type__")] == GroupType.FITTED_ATTRIBUTES
             )
-            # TODO: add subgroups to fit_user_attrs
+            for name, subgroup in fit_group._v_groups.items():
+                fit_user_attrs[name] = _load_estimator_from_group(subgroup)
 
             assert not [p for p in fit_user_attrs if p.startswith("__")]
             for k, v in fit_user_attrs.items():
@@ -149,7 +172,19 @@ def _load_estimator_from_group(group):
         raise ValueError("_load_estimator_from_group got a group with fitting data")
 
     elif group_type == GroupType.LIST_OF_NAMED_ESTIMATORS:
-        # TODO: code here
-        raise NotImplementedError("list of tuples")
+        list_of_names_estimators = []
+        for name, rest in zip(user_attrs["names"], user_attrs["rests"]):
+            list_of_names_estimators.append(
+                (name, _load_estimator_from_group(group[name]), *rest)
+            )
+        return list_of_names_estimators
 
-    raise NotImplementedError("unrecognized group type")
+    elif group_type == GroupType.LIST_OF_ESTIMATORS:
+        list_of_estimators = []
+        for i in range(user_attrs["len"]):
+            list_of_estimators.append(_load_estimator_from_group(group[f"item_{i}"]))
+        return list_of_estimators
+
+    raise NotImplementedError(
+        f"HDF group type {group_type.name} loading not implemented"
+    )

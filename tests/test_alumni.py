@@ -1,5 +1,8 @@
+from typing import Optional, Union, Iterable
+
 import numpy as np
 import pytest
+import sklearn.base
 import tables
 
 from alumni import __version__, alumni
@@ -25,20 +28,36 @@ def test_save(tmp_path, estimator_sample):
         assert root_attrs["protocol_version"] == alumni.PROTOCOL_VERSION
 
         # check estimator attrs
-        est_attrs = h.root[alumni.ESTIMATOR_GROUP]._v_attrs
+        est_group = h.root[alumni.ESTIMATOR_GROUP]
+        est_attrs = est_group._v_attrs
         assert (
             est_attrs["__class_name__"]
             == f"{estimator.__class__.__module__}.{estimator.__class__.__name__}"
         )
         assert est_attrs["__type__"] == alumni.GroupType.ESTIMATOR.name
-        for attr_name in estimator.get_params():
-            np.testing.assert_equal(est_attrs[attr_name], getattr(estimator, attr_name))
+        for attr_name in estimator.get_params(deep=False):
+            orig_param = getattr(estimator, attr_name)
+            assert_param_saved(orig_param, attr_name, est_group)
 
         # check fit attrs
-        fit_attrs = h.root[alumni.ESTIMATOR_GROUP][alumni.FIT_GROUP]._v_attrs
+        fit_group = est_group[alumni.FIT_GROUP]
+        fit_attrs = fit_group._v_attrs
         assert fit_attrs["__type__"] == alumni.GroupType.FITTED_ATTRIBUTES.name
         for attr_name in estimator_sample.fit_param_names:
-            np.testing.assert_equal(fit_attrs[attr_name], getattr(estimator, attr_name))
+            orig_param = getattr(estimator, attr_name)
+            assert_param_saved(orig_param, attr_name, fit_group)
+
+
+def assert_param_saved(param, param_name, group):
+    if (
+        alumni.is_list_of_named_estimators(param)
+        or alumni.is_list_of_estimators(param)
+        or alumni.is_estimator(param)
+    ):
+        # recursive estimator - only check for existence. skip check for identity
+        assert param_name in group
+    else:
+        assert_equal(group._v_attrs[param_name], param)
 
 
 @pytest.mark.parametrize("estimator_sample", ESTIMATORS)
@@ -50,10 +69,55 @@ def test_load(tmp_path, estimator_sample):
 
     # load estimator and check it
     fit_attr_names = estimator_sample.fit_param_names
-    attr_names = list(estimator.get_params())
+    attr_names = list(estimator.get_params(deep=False))
     loaded_est = alumni.load_estimator(fn)
     assert type(loaded_est) == type(estimator)
     for attr_name in attr_names + fit_attr_names:
-        np.testing.assert_equal(
-            getattr(loaded_est, attr_name), getattr(estimator, attr_name)
-        )
+        assert_equal(getattr(loaded_est, attr_name), getattr(estimator, attr_name))
+
+
+def assert_equal(
+    actual: Union[np.ndarray, Iterable, int, float],
+    desired: Union[np.ndarray, Iterable, int, float],
+    err_msg: Optional[str] = "",
+    verbose: Optional[bool] = True,
+) -> None:
+    # recursively call itself when needed (copied from np.testing.assert_equal)
+    __tracebackhide__ = True  # Hide traceback for py.test
+    if isinstance(desired, dict):
+        if not isinstance(actual, dict):
+            raise AssertionError(repr(type(actual)))
+        assert_equal(len(actual), len(desired), err_msg, verbose)
+        for k, i in desired.items():
+            if k not in actual:
+                raise AssertionError(repr(k))
+            assert_equal(actual[k], desired[k], "key=%r\n%s" % (k, err_msg), verbose)
+        return
+    if isinstance(desired, (list, tuple)) and isinstance(actual, (list, tuple)):
+        assert_equal(len(actual), len(desired), err_msg, verbose)
+        for k in range(len(desired)):
+            assert_equal(actual[k], desired[k], "item=%r\n%s" % (k, err_msg), verbose)
+        return
+    # BaseEstimator doesn't define an __eq__ function, compare it's properties
+    if isinstance(desired, sklearn.base.BaseEstimator):
+        if not type(actual) == type(desired):
+            raise AssertionError(repr(type(actual)))
+        assert_equal(actual.__dict__, desired.__dict__, err_msg, verbose)
+        return
+    # Tree doesn't define an __eq__ function, compare it's properties
+    if isinstance(desired, sklearn.tree.tree.Tree):
+        if not type(actual) == type(desired):
+            raise AssertionError(repr(type(actual)))
+        actual_tree = {
+            k: getattr(actual, k)
+            for k in dir(actual)
+            if not callable(getattr(actual, k))
+        }
+        desired_tree = {
+            k: getattr(desired, k)
+            for k in dir(desired)
+            if not callable(getattr(desired, k))
+        }
+        assert_equal(actual_tree, desired_tree, err_msg, verbose)
+        return
+    np.testing.assert_equal(actual, desired, err_msg, verbose)

@@ -1,16 +1,19 @@
 import enum
-from typing import NamedTuple, List, Any, Dict, Optional
+from typing import NamedTuple, List, Any, Dict, Optional, Union, Callable
 
 import numpy as np
 import pytest
 from sklearn import cluster
+from sklearn import compose
 from sklearn import datasets
 from sklearn import decomposition
+from sklearn import ensemble
 from sklearn import feature_extraction
 from sklearn import feature_selection
 from sklearn import impute
 from sklearn import linear_model
 from sklearn import neighbors
+from sklearn import pipeline
 from sklearn import preprocessing
 from sklearn import svm
 
@@ -25,7 +28,7 @@ class EstimatorKind(enum.Enum):
 
 class EstimatorSample(NamedTuple):
     estimator_class: type
-    estimator_init_kwargs: Dict[str, Any]
+    estimator_init_kwargs: Union[Dict[str, Any], Callable]
     estimator_kind: Optional[EstimatorKind]
     fit_param_names: List[str]
     X: Any
@@ -160,13 +163,77 @@ ESTIMATORS = [
         np.array([[1, 1], [2, 1], [1, 0], [4, 7], [3, 5], [3, 6]]),
         None,
     ),
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                ("onehotencoder", preprocessing.OneHotEncoder(handle_unknown="ignore"))
+            ]
+        ),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
+    ),
+    EstimatorSample(
+        pipeline.Pipeline,
+        lambda: dict(
+            steps=[
+                (
+                    "pipeline",
+                    pipeline.make_pipeline(
+                        pipeline.make_pipeline(
+                            preprocessing.OneHotEncoder(handle_unknown="ignore")
+                        )
+                    ),
+                )
+            ]
+        ),
+        EstimatorKind.transform,
+        [],  # all fitted params are deep
+        [["Male", 1], ["Female", 3], ["Female", 2]],
+        None,
+    ),
+    EstimatorSample(
+        compose.ColumnTransformer,
+        lambda: dict(
+            transformers=[
+                ("norm1", preprocessing.Normalizer(norm="l1"), [0, 1]),
+                ("norm2", preprocessing.Normalizer(norm="l1"), slice(2, 4)),
+            ]
+        ),
+        EstimatorKind.transform,
+        ["sparse_output_", "transformers_", "_columns", "_remainder", "_n_features"],
+        np.array([[0.0, 1.0, 2.0, 2.0], [1.0, 1.0, 0.0, 1.0]]),
+        None,
+    ),
+    EstimatorSample(
+        ensemble.AdaBoostRegressor,
+        dict(random_state=0, n_estimators=100),
+        EstimatorKind.predict,
+        ["estimators_", "estimator_weights_", "estimator_errors_"],
+        *datasets.make_regression(
+            n_features=4, n_informative=2, random_state=0, shuffle=False
+        ),
+    ),
+    EstimatorSample(
+        feature_selection.RFE,
+        lambda: dict(
+            estimator=svm.SVR(kernel="linear"), n_features_to_select=5, step=1
+        ),
+        EstimatorKind.predict,  # defined by the svm.SVR estimator
+        ["n_features_", "support_", "ranking_", "estimator_"],
+        *datasets.make_friedman1(n_samples=50, n_features=10, random_state=0),
+    ),
 ]
 
 
 def get_estimator(estimator_sample):
-    estimator = estimator_sample.estimator_class(
-        **estimator_sample.estimator_init_kwargs
-    )
+    if callable(estimator_sample.estimator_init_kwargs):
+        init_kwargs = estimator_sample.estimator_init_kwargs()
+    else:
+        init_kwargs = estimator_sample.estimator_init_kwargs
+    estimator = estimator_sample.estimator_class(**init_kwargs)
     estimator.fit(estimator_sample.X, estimator_sample.y)
     return estimator
 
