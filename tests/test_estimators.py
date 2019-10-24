@@ -16,6 +16,7 @@ from sklearn import neighbors
 from sklearn import pipeline
 from sklearn import preprocessing
 from sklearn import svm
+from sklearn import neural_network
 
 from alumni import estimators
 
@@ -44,6 +45,8 @@ class EstimatorSample(NamedTuple):
             return None
         return self.estimator_kind.name
 
+
+cal_housing = datasets.california_housing.fetch_california_housing()
 
 ESTIMATORS = [
     EstimatorSample(
@@ -230,6 +233,22 @@ ESTIMATORS = [
         EstimatorKind.predict,  # defined by the svm.SVR estimator
         ["n_features_", "support_", "ranking_", "estimator_"],
         *datasets.make_friedman1(n_samples=50, n_features=10, random_state=0),
+    ),
+    EstimatorSample(
+        neural_network.MLPRegressor,
+        dict(activation="logistic"),
+        EstimatorKind.predict,
+        [
+            "loss_",
+            "coefs_",
+            "intercepts_",
+            "n_iter_",
+            "n_layers_",
+            "n_outputs_",
+            "out_activation_",
+        ],
+        cal_housing.data,
+        cal_housing.target - cal_housing.target.mean(),
     ),
 ]
 
